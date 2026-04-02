@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trợ lý Dạy học AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+      }
+      .font-serif {
+        font-family: 'Lora', serif;
+      }
+      @media print {
+        body {
+          background-color: white;
+        }
+        
+        .no-print {
+          display: none !important;
+        }
+        
+        /* Default print behavior: hide everything */
+        body * {
+          visibility: hidden;
+        }
+        
+        /* When printing exam, only show #print-area */
+        body.printing-exam #print-area, 
+        body.printing-exam #print-area * {
+          visibility: visible;
+        }
+        body.printing-exam #print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+
+        /* When printing matrix, only show #matrix-print-area */
+        body.printing-matrix #matrix-print-area, 
+        body.printing-matrix #matrix-print-area * {
+          visibility: visible;
+        }
+        body.printing-matrix #matrix-print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+
+        /* When printing specification, only show #spec-print-area */
+        body.printing-spec #spec-print-area, 
+        body.printing-spec #spec-print-area * {
+          visibility: visible;
+        }
+        body.printing-spec #spec-print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+      }
+    </style>
+</head>
+  <body class="bg-gray-50">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+/* Base styles - imported via index.tsx for Vite bundling */
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-serif {
+  font-family: 'Lora', serif;
+}
