@@ -360,7 +360,7 @@ export async function parseMatrixFromText(text: string): Promise<ExamMatrix | nu
 }
 
 export async function generateExam(matrix: ExamMatrix, documentContent?: string, customMatrixText?: string): Promise<string> {
-  const modelName = 'gemini-3.1-pro-preview';
+  const modelName = 'gemini-2.5-flash';
   
   const formattedMatrix = customMatrixText ? `\nMA TRẬN VÀ BẢN ĐẶC TẢ TỪ FILE TẢI LÊN:\n${customMatrixText}\n\n(Lưu ý: Bám sát nội dung ma trận/đặc tả từ file này thay vì các thông số chuẩn)\n` : formatMatrixForPrompt(matrix);
   

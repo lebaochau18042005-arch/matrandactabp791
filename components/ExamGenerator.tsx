@@ -106,15 +106,15 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
     setIsLoading(true);
     setError(null);
     setIsEditing(false);
-    
-    const newExams: string[] = [];
+
     try {
-      for (let i = 0; i < numExams; i++) {
-        const examContent = await generateExam(matrixData, documentContent, matrixSource === 'file' ? customMatrixText : undefined);
-        newExams.push(examContent);
-      }
+      // Generate all exams in PARALLEL for maximum speed
+      const promises = Array.from({ length: numExams }, () =>
+        generateExam(matrixData, documentContent, matrixSource === 'file' ? customMatrixText : undefined)
+      );
+      const newExams = await Promise.all(promises);
       setExams(prev => [...prev, ...newExams]);
-      setCurrentExamIndex(exams.length); // Switch to the first newly generated exam
+      setCurrentExamIndex(exams.length);
     } catch (err: any) {
       setError(`Lỗi tạo đề: ${err.message || 'Không rõ nguyên nhân'}. Vui lòng thử lại.`);
       console.error(err);
@@ -122,6 +122,7 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
       setIsLoading(false);
     }
   };
+
 
   const handleRemoveExam = (index: number) => {
     const newExams = exams.filter((_, i) => i !== index);

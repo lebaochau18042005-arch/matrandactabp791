@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Unrelated folders
+SKILL EDUCATION
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
