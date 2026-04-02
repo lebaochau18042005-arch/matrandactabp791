@@ -308,34 +308,48 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
   };
 
   const handleExportAnswerKeyExcel = () => {
-    const answerSection =
-      generatedExam.split(/II\.?\s*ĐÁP ÁN/i)[1]?.split(/III\.?\s*LỜI GIẢI/i)[0] ||
-      generatedExam.split(/ĐÁP ÁN/i)[1]?.split(/LỜI GIẢI/i)[0];
+    // Strip markdown heading prefixes (#, **) then split on ĐÁP ÁN / LỜI GIẢI
+    const clean = generatedExam.replace(/^#{1,4}\s*/gm, '').replace(/\*\*/g, '');
 
-    if (!answerSection) {
-        alert("Không tìm thấy phần đáp án trong nội dung đề thi.");
+    // Try multiple split patterns, from most specific to most general
+    const answerSection =
+      clean.split(/II\.?\s*ĐÁP ÁN/i)[1]?.split(/III\.?\s*LỜI GIẢI/i)[0] ||
+      clean.split(/ĐÁP ÁN/i)[1]?.split(/LỜI GIẢI/i)[0] ||
+      clean.split(/ANSWER KEY/i)[1]?.split(/EXPLANATION/i)[0];
+
+    if (!answerSection || answerSection.trim().length < 5) {
+        alert("Không tìm thấy phần đáp án trong nội dung đề thi.\n\nĐảm bảo đề thi có phần 'II. ĐÁP ÁN'.");
+        console.error('[Answer Export] Could not find answer section. First 200 chars:', clean.slice(0, 200));
         return;
     }
 
     const answers: string[][] = [["Câu", "Đáp án"]];
     const lines2 = answerSection.trim().split('\n');
+    console.info('[Answer Export] Found section, lines:', lines2.length);
+
     lines2.forEach(line => {
-        const trimmed = line.trim();
+        const trimmed = line.trim().replace(/\*\*/g, '');
         if (!trimmed) return;
-        const bgdMatch = trimmed.match(/^(?:Câu\s+)?(\w+)[.:]\s*((?:[a-d]\)\s*(?:Đúng|Sai)[,;\s]*)+)/i);
+
+        // BGD format: "Câu X: a) Đúng, b) Sai, ..."
+        const bgdMatch = trimmed.match(/^(?:Câu\s+)?(\w+)\s*[.:]\s*((?:[a-d]\)\s*(?:Đúng|Sai)[,;\s]*)+)/i);
         if (bgdMatch) { answers.push([`Câu ${bgdMatch[1]}`, bgdMatch[2].trim()]); return; }
-        const oldMatch = trimmed.match(/^(?:Câu\s+)?(\d+)[.:]\s*(.+)$/i);
-        if (oldMatch) { answers.push([oldMatch[1], oldMatch[2].trim()]); }
+
+        // Standard MC: "1. A" / "1: B" / "Câu 1: C" / "Câu 1. D"
+        const mcMatch = trimmed.match(/^(?:Câu\s+)?(\d+)\s*[.:)\-]\s*([A-DĐSa-d][^,\n]*)/i);
+        if (mcMatch) { answers.push([mcMatch[1], mcMatch[2].trim()]); return; }
     });
 
     if (answers.length <= 1) {
-        alert("Không thể trích xuất danh sách đáp án. Vui lòng kiểm tra lại định dạng đề thi.");
+        alert("Không thể trích xuất đáp án. Hãy kiểm tra Console (F12) để xem định dạng.");
+        console.error('[Answer Export] No answers matched. Sample lines:', lines2.slice(0, 10));
         return;
     }
 
     const csvContent = answers.map(row => row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
     downloadFile(`dap-an-de-${currentExamIndex + 1}.csv`, csvContent, 'text/csv;charset=utf-8;');
   };
+
   
   const handleExportPdf = () => {
     // Uses the browser's print functionality with custom print styles
