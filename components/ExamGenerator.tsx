@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ExamMatrix } from '../types';
 import { generateExam } from '../services/geminiService';
 import { generateShareLink } from '../services/sharingService';
@@ -6,6 +6,12 @@ import { extractTextFromFile } from '../services/fileService';
 import { saveExamToCloud } from '../services/libraryService';
 import { FileText, Upload, Settings, ListOrdered, Download, FileSpreadsheet, Eye, Trash2, Plus, Sparkles, CloudUpload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import {
+  Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
+  Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType,
+  convertInchesToTwip, PageOrientation
+} from 'docx';
+import { saveAs } from 'file-saver';
 
 interface ExamGeneratorProps {
   matrixData: ExamMatrix;
@@ -174,112 +180,127 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
     }
   };
 
-  const handleExportWord = () => {
-    /**
-     * Converts plain exam text into a structured HTML string for Word export.
-     * This function parses headers, sections, questions, and simple markdown tables.
-     */
-    const formatExamTextToHtml = (examText: string): string => {
-        const processPart = (partText: string): string => {
-            if (!partText || !partText.trim()) return '';
+  const handleExportWord = async () => {
+    // Vietnamese standard A4 margins: left 3cm, right 2cm, top/bottom 2cm
+    // 1 inch = 1440 twips; 1 cm ~ 567 twips
+    const MARGIN = { top: 1134, bottom: 1134, left: 1701, right: 1134 }; // ~2cm top/bottom, 3cm left, 2cm right
+    const FONT = 'Times New Roman';
+    const SIZE = 26; // 13pt = 26 half-points
+    const SIZE_SMALL = 24; // 12pt for options
 
-            let html = '<div>';
-            const lines = partText.trim().split('\n');
-            let inTable = false;
+    // Helper: make a standard body paragraph
+    const bodyPara = (text: string, opts: { bold?: boolean; center?: boolean; indent?: number; italic?: boolean } = {}) =>
+      new Paragraph({
+        alignment: opts.center ? AlignmentType.CENTER : opts.indent ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
+        indent: opts.indent ? { left: opts.indent * 720 } : undefined,
+        spacing: { before: 80, after: 80 },
+        children: [new TextRun({
+          text,
+          font: FONT,
+          size: opts.indent ? SIZE_SMALL : SIZE,
+          bold: opts.bold,
+          italics: opts.italic,
+        })],
+      });
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                if (!line) {
-                    if (inTable) {
-                        html += '</table>';
-                        inTable = false;
-                    }
-                    continue; // Skip empty lines, margins will handle spacing
-                }
+    // Helper: section heading
+    const sectionPara = (text: string) =>
+      new Paragraph({
+        alignment: AlignmentType.LEFT,
+        spacing: { before: 280, after: 140 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '222222' } },
+        children: [new TextRun({ text, font: FONT, size: SIZE, bold: true, allCaps: true })],
+      });
 
-                // Simple markdown table detection
-                if (line.startsWith('|') && line.endsWith('|') && line.split('|').length > 2) {
-                    const cells = line.split('|').slice(1, -1).map(c => c.trim());
-                    const isSeparator = cells.every(c => /^-+$/.test(c));
-                    if (isSeparator) continue;
+    // Helper: centered bold header
+    const centerBold = (text: string, size = SIZE) =>
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 60, after: 60 },
+        children: [new TextRun({ text, font: FONT, size, bold: true })],
+      });
 
-                    if (!inTable) {
-                        html += '<table border="1" style="border-collapse: collapse; width: 100%; margin-top: 1em; margin-bottom: 1em;">';
-                        inTable = true;
-                    }
-
-                    const isHeaderRow = !inTable || (lines[i-1] && !lines[i-1].includes('|'));
-                    const tag = isHeaderRow ? 'th' : 'td';
-                    
-                    html += '<tr>';
-                    cells.forEach(cell => {
-                        html += `<${tag} style="padding: 8px; border: 1px solid #333; text-align: left;">${cell}</${tag}>`;
-                    });
-                    html += '</tr>';
-                    
-                    continue; 
-                }
-                
-                if (inTable) {
-                    html += '</table>';
-                    inTable = false;
-                }
-
-                // Regular text processing with styling
-                if (/^(SỞ GD&ĐT|TRƯỜNG THPT)/.test(line)) {
-                    html += `<p style="text-align:center; font-weight:bold; margin:0;">${line}</p>`;
-                } else if (/^(ĐỀ KIỂM TRA|MÔN:)/.test(line)) {
-                    html += `<h2 style="text-align:center; margin-top: 0.5em;">${line}</h2>`;
-                } else if (/^I\. ĐỀ BÀI|II\. ĐÁP ÁN|III\. LỜI GIẢI CHI TIẾT/.test(line)) {
-                    html += `<h3 style="font-weight:bold; margin-top: 2em; margin-bottom: 1em; border-bottom: 1px solid #333; padding-bottom: 0.25em;">${line}</h3>`;
-                } else if (/^PHẦN I|PHẦN II/.test(line)) {
-                    html += `<h4 style="font-weight:bold; margin-top: 1.5em; margin-bottom: 0.5em; font-style: italic;">${line}</h4>`;
-                } else if (/^Câu \d+[:.]/.test(line)) {
-                    html += `<p style="font-weight:bold; margin-top:1.2em;">${line}</p>`;
-                } else if (/^[A-D]\./.test(line)) {
-                    html += `<p style="margin-left:2em;">${line}</p>`;
-                } else {
-                    html += `<p style="margin: 0.5em 0;">${line}</p>`;
-                }
-            }
-            
-            if (inTable) {
-                html += '</table>';
-            }
-
-            html += '</div>';
-            return html;
-        };
-
-        const parts = examText.split(/^(?=II\. ĐÁP ÁN|III\. LỜI GIẢI CHI TIẾT)/m);
-        return parts.map(part => processPart(part)).join('');
+    // Helper: build a real DOCX table from markdown table lines
+    const buildTable = (mdLines: string[]): Table => {
+      const rows = mdLines
+        .filter(l => !l.trim().match(/^\|[-:| ]+\|$/))
+        .map((l, ri) => {
+          const cells = l.split('|').slice(1, -1).map(c => c.trim());
+          return new TableRow({
+            children: cells.map(cellText =>
+              new TableCell({
+                width: { size: Math.floor(9072 / cells.length), type: WidthType.DXA },
+                shading: ri === 0 ? { type: ShadingType.CLEAR, fill: 'D0D0D0' } : undefined,
+                children: [new Paragraph({
+                  children: [new TextRun({ text: cellText, font: FONT, size: SIZE_SMALL, bold: ri === 0 })],
+                })],
+              })
+            ),
+          });
+        });
+      return new Table({ rows, width: { size: 9072, type: WidthType.DXA } });
     };
 
-    const header = `
-        <html 
-            xmlns:o='urn:schemas-microsoft-com:office:office' 
-            xmlns:w='urn:schemas-microsoft-com:office:word' 
-            xmlns='http://www.w3.org/TR/REC-html40'>
-            <head>
-                <meta charset='utf-8'>
-                <title>Đề thi</title>
-                <style>
-                    body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; }
-                    p { margin: 0.5em 0; }
-                    table { border-collapse: collapse; width: 100%; }
-                    td, th { padding: 5px; border: 1px solid black; text-align: left; }
-                </style>
-            </head>
-            <body>
-    `;
-    const footer = "</body></html>";
-    
-    const contentHtml = formatExamTextToHtml(generatedExam);
-    
-    const sourceHTML = header + contentHtml + footer;
-    downloadFile('de-thi.doc', sourceHTML, 'application/msword');
-};
+    // Parse exam text into DOCX children
+    const children: (Paragraph | Table)[] = [];
+    const lines = generatedExam.split('\n');
+    let tableBuffer: string[] = [];
+
+    const flushTable = () => {
+      if (tableBuffer.length > 1) children.push(buildTable(tableBuffer));
+      tableBuffer = [];
+    };
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+
+      // Markdown table row
+      if (line.startsWith('|') && line.endsWith('|') && line.split('|').length > 2) {
+        tableBuffer.push(line);
+        continue;
+      } else { flushTable(); }
+
+      if (!line) { children.push(new Paragraph({ spacing: { before: 40, after: 40 } })); continue; }
+
+      if (/^(SỞ GD|TRƯỜNG THPT|SỞ GIÁO DỤC)/i.test(line)) {
+        children.push(centerBold(line));
+      } else if (/^(ĐỀ KIỂM TRA|ĐỀ THI|MÔN:)/i.test(line)) {
+        children.push(centerBold(line, 28));
+      } else if (/^(I|II|III)\. /i.test(line)) {
+        children.push(sectionPara(line));
+      } else if (/^PHẦN (I|II|III)/i.test(line)) {
+        children.push(bodyPara(line, { bold: true, italic: true }));
+      } else if (/^Câu \d+[:.]/.test(line)) {
+        children.push(bodyPara(line, { bold: true }));
+      } else if (/^[A-D][\.\)]/.test(line)) {
+        children.push(bodyPara(line, { indent: 1 }));
+      } else if (/^[a-d]\)/.test(line)) {
+        // BGD Đúng/Sai options
+        children.push(bodyPara(line, { indent: 1 }));
+      } else if (/^\*+.+\*+$/.test(line)) {
+        // Bold markdown **text**
+        children.push(bodyPara(line.replace(/\*+/g, ''), { bold: true }));
+      } else {
+        children.push(bodyPara(line));
+      }
+    }
+    flushTable();
+
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            margin: MARGIN,
+            size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) }, // A4
+          },
+        },
+        children,
+      }],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `de-thi-${currentExamIndex + 1}.docx`);
+  };
   
   const handleExportExcel = () => {
     const csvContent = `"${generatedExam.replace(/"/g, '""')}"`;
