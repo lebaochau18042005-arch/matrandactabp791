@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import type { ExamMatrix } from '../types';
 import { generateExam } from '../services/geminiService';
 import { generateShareLink } from '../services/sharingService';
@@ -282,28 +282,29 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
 };
   
   const handleExportExcel = () => {
-     // For Excel (CSV), wrap the entire content in quotes to keep it in a single cell.
-     // This handles commas and quotes within the text.
     const csvContent = `"${generatedExam.replace(/"/g, '""')}"`;
     downloadFile(`de-thi-${currentExamIndex + 1}.csv`, csvContent, 'text/csv;charset=utf-8;');
   };
 
   const handleExportAnswerKeyExcel = () => {
-    const answerSection = generatedExam.split(/II\. ĐÁP ÁN/i)[1]?.split(/III\. LỜI GIẢI CHI TIẾT/i)[0];
+    const answerSection =
+      generatedExam.split(/II\.?\s*ĐÁP ÁN/i)[1]?.split(/III\.?\s*LỜI GIẢI/i)[0] ||
+      generatedExam.split(/ĐÁP ÁN/i)[1]?.split(/LỜI GIẢI/i)[0];
+
     if (!answerSection) {
         alert("Không tìm thấy phần đáp án trong nội dung đề thi.");
         return;
     }
 
     const answers: string[][] = [["Câu", "Đáp án"]];
-    const lines = answerSection.trim().split('\n');
-    lines.forEach(line => {
+    const lines2 = answerSection.trim().split('\n');
+    lines2.forEach(line => {
         const trimmed = line.trim();
-        // Match patterns like "1. A", "Câu 1: B", "1: Đúng", etc.
-        const match = trimmed.match(/^(?:Câu\s+)?(\d+)[\.\:]\s*(.*)$/i);
-        if (match) {
-            answers.push([match[1], match[2]]);
-        }
+        if (!trimmed) return;
+        const bgdMatch = trimmed.match(/^(?:Câu\s+)?(\w+)[.:]\s*((?:[a-d]\)\s*(?:Đúng|Sai)[,;\s]*)+)/i);
+        if (bgdMatch) { answers.push([`Câu ${bgdMatch[1]}`, bgdMatch[2].trim()]); return; }
+        const oldMatch = trimmed.match(/^(?:Câu\s+)?(\d+)[.:]\s*(.+)$/i);
+        if (oldMatch) { answers.push([oldMatch[1], oldMatch[2].trim()]); }
     });
 
     if (answers.length <= 1) {
