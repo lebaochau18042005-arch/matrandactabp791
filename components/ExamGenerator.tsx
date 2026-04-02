@@ -344,20 +344,53 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
   };
 
   const renderExamContent = (text: string) => {
-    const lines = text.split('\n');
     const elements: React.ReactNode[] = [];
-    let currentTable: string[][] = [];
+    const lines = text.split('\n');
+    let tableRows: string[][] = [];
+    let tableIsFirstRow = true;
+
+    // Inline markdown parser: bold, italic, latex, code, backtick-wrapped latex
+    const renderInline = (raw: string, key: string): React.ReactNode => {
+      // Normalise: strip outer markdown bold `**text**` wrapping entire string (handled at line level)
+      const parts: React.ReactNode[] = [];
+      // Regex: match $...$ (latex), `$...$` (backtick-wrapped latex), **...**, *...*, `...`
+      const regex = /`\$([^`]+)\$`|\$\$([^$]+)\$\$|\$([^$\n]+)\$|`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
+      let last = 0;
+      let m: RegExpExecArray | null;
+      let pi = 0;
+      while ((m = regex.exec(raw)) !== null) {
+        if (m.index > last) parts.push(<span key={`${key}-t${pi++}`}>{raw.slice(last, m.index)}</span>);
+        if (m[1] !== undefined || m[2] !== undefined || m[3] !== undefined) {
+          // Math
+          const mathContent = m[1] ?? m[2] ?? m[3];
+          parts.push(
+            <span key={`${key}-m${pi++}`} className="font-mono text-blue-900 bg-blue-50 px-0.5 rounded text-[0.92em]" title="LaTeX">
+              {mathContent}
+            </span>
+          );
+        } else if (m[4] !== undefined) {
+          parts.push(<code key={`${key}-c${pi++}`} className="bg-gray-100 px-1 rounded font-mono text-sm">{m[4]}</code>);
+        } else if (m[5] !== undefined) {
+          parts.push(<strong key={`${key}-b${pi++}`}>{m[5]}</strong>);
+        } else if (m[6] !== undefined) {
+          parts.push(<em key={`${key}-i${pi++}`}>{m[6]}</em>);
+        }
+        last = m.index + m[0].length;
+      }
+      if (last < raw.length) parts.push(<span key={`${key}-te${pi++}`}>{raw.slice(last)}</span>);
+      return parts.length === 1 && typeof parts[0] === 'string' ? parts[0] : <>{parts}</>;
+    };
 
     const flushTable = (key: number) => {
-      if (currentTable.length > 0) {
+      if (tableRows.length > 0) {
         elements.push(
           <div key={`table-${key}`} className="overflow-x-auto my-4">
-            <table className="min-w-full border-collapse border border-gray-800">
+            <table className="min-w-full border-collapse border border-gray-400 text-sm">
               <tbody>
-                {currentTable.map((row, rIdx) => (
-                  <tr key={rIdx}>
+                {tableRows.map((row, rIdx) => (
+                  <tr key={rIdx} className={rIdx === 0 ? 'bg-gray-100 font-semibold' : 'even:bg-gray-50'}>
                     {row.map((cell, cIdx) => (
-                      <td key={cIdx} className="border border-gray-800 p-2 text-sm">{cell}</td>
+                      <td key={cIdx} className="border border-gray-400 px-3 py-1.5">{renderInline(cell, `tr${key}-${rIdx}-${cIdx}`)}</td>
                     ))}
                   </tr>
                 ))}
@@ -365,46 +398,98 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
             </table>
           </div>
         );
-        currentTable = [];
+        tableRows = [];
+        tableIsFirstRow = true;
       }
     };
 
     lines.forEach((line, idx) => {
       const trimmed = line.trim();
 
+      // --- Markdown table ---
       if (trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length > 2) {
         const cells = trimmed.split('|').slice(1, -1).map(c => c.trim());
-        const isSeparator = cells.every(c => /^-+$/.test(c));
-        if (!isSeparator) {
-          currentTable.push(cells);
-        }
+        if (cells.every(c => /^[-:]+$/.test(c))) return; // separator row
+        tableRows.push(cells);
         return;
       } else {
         flushTable(idx);
       }
 
-      if (/^(SỞ GD&ĐT|TRƯỜNG THPT)/.test(trimmed)) {
-        elements.push(<p key={idx} className="text-center font-bold uppercase mb-0 text-sm sm:text-base">{trimmed}</p>);
-      } else if (/^(ĐỀ KIỂM TRA|MÔN:)/.test(trimmed)) {
-        elements.push(<h2 key={idx} className="text-center text-lg sm:text-xl font-bold mt-4 mb-6 uppercase">{trimmed}</h2>);
-      } else if (/^I\. ĐỀ BÀI|II\. ĐÁP ÁN|III\. LỜI GIẢI CHI TIẾT/.test(trimmed)) {
-        elements.push(<h3 key={idx} className="font-bold text-base sm:text-lg mt-10 mb-4 border-b-2 border-black pb-1 uppercase">{trimmed}</h3>);
-      } else if (/^PHẦN I|PHẦN II/.test(trimmed)) {
-        elements.push(<h4 key={idx} className="font-bold italic mt-6 mb-2 text-sm sm:text-base">{trimmed}</h4>);
-      } else if (/^Câu \d+[:.]/.test(trimmed)) {
-        elements.push(<p key={idx} className="font-bold mt-4 mb-2 text-sm sm:text-base">{trimmed}</p>);
-      } else if (/^[A-D]\./.test(trimmed)) {
-        elements.push(<p key={idx} className="ml-6 sm:ml-10 mb-1 text-sm sm:text-base">{trimmed}</p>);
-      } else if (!trimmed) {
-        elements.push(<div key={idx} className="h-4" />);
-      } else {
-        elements.push(<p key={idx} className="mb-2 text-sm sm:text-base">{trimmed}</p>);
+      // --- Horizontal rule ---
+      if (/^---+$/.test(trimmed)) {
+        elements.push(<hr key={idx} className="my-4 border-gray-300" />);
+        return;
       }
+
+      // --- Empty line ---
+      if (!trimmed) {
+        elements.push(<div key={idx} className="h-3" />);
+        return;
+      }
+
+      // --- Markdown headings ---
+      const headingMatch = trimmed.match(/^(#{1,4})\s+(.*)/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const content = headingMatch[2].replace(/\*\*/g, ''); // strip bold markers
+        const cls = [
+          'font-bold uppercase mt-8 mb-3 pb-1 border-b border-gray-300',
+          level === 1 ? 'text-xl text-center' : level === 2 ? 'text-lg' : level === 3 ? 'text-base' : 'text-base italic'
+        ].join(' ');
+        elements.push(<p key={idx} className={cls}>{renderInline(content, `h${idx}`)}</p>);
+        return;
+      }
+
+      // --- School header lines ---
+      if (/^(SỞ GD|TRƯỜNG THPT|SỞ GIÁO DỤC)/i.test(trimmed)) {
+        elements.push(<p key={idx} className="text-center font-bold uppercase text-sm mb-0">{trimmed}</p>);
+        return;
+      }
+      if (/^(ĐỀ KIỂM TRA|ĐỀ THI|MÔN:)/i.test(trimmed)) {
+        elements.push(<h2 key={idx} className="text-center text-lg font-bold mt-3 mb-5 uppercase">{renderInline(trimmed, `h2-${idx}`)}</h2>);
+        return;
+      }
+
+      // --- Roman numeral section headers "I. ĐỀ BÀI" etc ---
+      if (/^(I|II|III|IV)\.\s+/i.test(trimmed)) {
+        elements.push(<h3 key={idx} className="font-bold text-base mt-8 mb-3 border-b-2 border-black pb-1 uppercase">{renderInline(trimmed, `sec${idx}`)}</h3>);
+        return;
+      }
+
+      // --- PHẦN I / PHẦN II ---
+      if (/^PHẦN (I|II|III)/i.test(trimmed)) {
+        elements.push(<h4 key={idx} className="font-bold italic mt-5 mb-2">{renderInline(trimmed, `ph${idx}`)}</h4>);
+        return;
+      }
+
+      // --- Question stem "Câu X:" bold ---
+      if (/^(Câu \d+[:.])/.test(trimmed) || /^\*\*Câu \d+/.test(trimmed)) {
+        const clean = trimmed.replace(/^\*\*/,'').replace(/\*\*$/,'');
+        elements.push(<p key={idx} className="font-bold mt-5 mb-1.5">{renderInline(clean, `q${idx}`)}</p>);
+        return;
+      }
+
+      // --- Options A/B/C/D ---
+      if (/^[A-D][.)]\s/.test(trimmed)) {
+        elements.push(<p key={idx} className="ml-8 mb-1">{renderInline(trimmed, `opt${idx}`)}</p>);
+        return;
+      }
+
+      // --- BGD Đúng/Sai options a/b/c/d ---
+      if (/^[a-d][)]\s/.test(trimmed)) {
+        elements.push(<p key={idx} className="ml-8 mb-1">{renderInline(trimmed, `bgd${idx}`)}</p>);
+        return;
+      }
+
+      // --- Default paragraph ---
+      elements.push(<p key={idx} className="mb-1.5 leading-relaxed">{renderInline(trimmed, `p${idx}`)}</p>);
     });
 
     flushTable(lines.length);
     return elements;
   };
+
   
   const formattedMatrix = JSON.stringify(matrixData, null, 2);
 
