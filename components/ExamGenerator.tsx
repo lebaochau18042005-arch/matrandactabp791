@@ -349,11 +349,44 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
     let tableRows: string[][] = [];
     let tableIsFirstRow = true;
 
+    // Convert LaTeX math to readable Vietnamese text
+    const cleanLatex = (latex: string): string => {
+      return latex
+        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1)/($2)')   // \frac{a}{b} → (a)/(b)
+        .replace(/\^{([^}]+)}/g, (_, e) => {                       // ^{n} → superscript chars
+          const sup: Record<string,string> = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻','n':'ⁿ'};
+          return e.split('').map((c: string) => sup[c] || c).join('');
+        })
+        .replace(/\^(\d)/g, (_, e) => {
+          const sup: Record<string,string> = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+          return sup[e] || e;
+        })
+        .replace(/_{([^}]+)}/g, (_, e) => {                        // _{n} → subscript
+          const sub: Record<string,string> = {'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'};
+          return e.split('').map((c: string) => sub[c] || c).join('');
+        })
+        .replace(/\\,/g, '\u202F')        // thin non-breaking space (thousands separator)
+        .replace(/\{,\}/g, ',')           // {,} → decimal comma
+        .replace(/\\%/g, '%')
+        .replace(/\\cdot/g, '·')
+        .replace(/\\times/g, '×')
+        .replace(/\\div/g, '÷')
+        .replace(/\\pm/g, '±')
+        .replace(/\\approx/g, '≈')
+        .replace(/\\geq/g, '≥')
+        .replace(/\\leq/g, '≤')
+        .replace(/\\neq/g, '≠')
+        .replace(/\\infty/g, '∞')
+        .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
+        .replace(/\\left[({[]/g, '').replace(/\\right[)}\]]/g, '')
+        .replace(/\{([^{}]+)\}/g, '$1')  // strip remaining {…}
+        .replace(/\\[a-zA-Z]+/g, '')     // strip remaining \commands
+        .replace(/\s+/g, ' ').trim();
+    };
+
     // Inline markdown parser: bold, italic, latex, code, backtick-wrapped latex
     const renderInline = (raw: string, key: string): React.ReactNode => {
-      // Normalise: strip outer markdown bold `**text**` wrapping entire string (handled at line level)
       const parts: React.ReactNode[] = [];
-      // Regex: match $...$ (latex), `$...$` (backtick-wrapped latex), **...**, *...*, `...`
       const regex = /`\$([^`]+)\$`|\$\$([^$]+)\$\$|\$([^$\n]+)\$|`([^`]+)`|\*\*([^*]+)\*\*|\*([^*]+)\*/g;
       let last = 0;
       let m: RegExpExecArray | null;
@@ -361,11 +394,11 @@ const ExamGenerator: React.FC<ExamGeneratorProps> = ({ matrixData, initialExam }
       while ((m = regex.exec(raw)) !== null) {
         if (m.index > last) parts.push(<span key={`${key}-t${pi++}`}>{raw.slice(last, m.index)}</span>);
         if (m[1] !== undefined || m[2] !== undefined || m[3] !== undefined) {
-          // Math
           const mathContent = m[1] ?? m[2] ?? m[3];
+          const readable = cleanLatex(mathContent);
           parts.push(
-            <span key={`${key}-m${pi++}`} className="font-mono text-blue-900 bg-blue-50 px-0.5 rounded text-[0.92em]" title="LaTeX">
-              {mathContent}
+            <span key={`${key}-m${pi++}`} className="font-semibold text-gray-900" title={mathContent}>
+              {readable}
             </span>
           );
         } else if (m[4] !== undefined) {
