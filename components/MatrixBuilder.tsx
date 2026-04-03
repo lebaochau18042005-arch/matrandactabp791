@@ -71,9 +71,10 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
   const curriculumFileRef = useRef<HTMLInputElement>(null);
   const [isImportingCurriculum, setIsImportingCurriculum] = useState(false);
 
-  // State for the new integrated topic adder
+  // State for custom input fields
   const [customChapter, setCustomChapter] = useState('');
   const [customContent, setCustomContent] = useState('');
+
   const [activeGradeTab, setActiveGradeTab] = useState<number>(initialMatrix.header.grade);
   const sampleTopics = useMemo(() => {
     const subjectTopics = ALL_SAMPLE_TOPICS[matrix.header.subject as keyof typeof ALL_SAMPLE_TOPICS] || {};
@@ -81,7 +82,38 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
   }, [matrix.header.subject, activeGradeTab]);
   const [expandedChapter, setExpandedChapter] = useState<string | null>(Object.keys(sampleTopics)[0] || null);
 
+  // --- localStorage-backed custom curriculum ---
+  const customCurriculumKey = `custom_curriculum__${matrix.header.subject}__${activeGradeTab}`;
+
+  const savedCustomTopics = useMemo<{ [chapter: string]: string[] }>(() => {
+    try {
+      const raw = localStorage.getItem(customCurriculumKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  }, [customCurriculumKey]);
+
+  const saveCustomCurriculum = (newTopics: ContentRow[]) => {
+    try {
+      const existing = (() => { try { return JSON.parse(localStorage.getItem(customCurriculumKey) || '{}'); } catch { return {}; } })();
+      newTopics.forEach(t => {
+        if (!existing[t.chapterName]) existing[t.chapterName] = [];
+        if (!existing[t.chapterName].includes(t.contentName)) {
+          existing[t.chapterName].push(t.contentName);
+        }
+      });
+      localStorage.setItem(customCurriculumKey, JSON.stringify(existing));
+    } catch (e) { console.error('Lỗi lưu chương trình:', e); }
+  };
+
+  const clearCustomCurriculum = () => {
+    if (window.confirm('Xóa toàn bộ chương trình đã lưu cho môn này?')) {
+      localStorage.removeItem(customCurriculumKey);
+      window.location.reload();
+    }
+  };
+
   // Sync grade tab with matrix header grade for better UX
+
   useEffect(() => {
     setActiveGradeTab(matrix.header.grade);
   }, [matrix.header.grade]);
@@ -483,7 +515,8 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
       const newMatrix = { ...matrix, topics: [...matrix.topics, ...newTopics] };
       setMatrix(newMatrix);
       onMatrixUpdate(newMatrix);
-      alert(`✅ Đã nạp ${newTopics.length} nội dung từ file "${file.name}"!`);
+      saveCustomCurriculum(newTopics);
+      alert(`✅ Đã nạp và lưu ${newTopics.length} nội dung từ file "${file.name}"! (Tự động lưu để dùng lại sau)`);
     } catch (err) {
       alert(`Lỗi khi đọc file: ${err instanceof Error ? err.message : 'Không xác định'}`);
     } finally {
@@ -920,26 +953,38 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
           new Paragraph({ spacing: { before: 400 } }),
           new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
+            layout: TableLayoutType.FIXED,
             rows: [
-              // Header Row 1
+              // Header Row 1: Main column groups
               new TableRow({
+                tableHeader: true,
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "STT", bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Chương/Chủ đề", bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nội dung/Đơn vị kiến thức", bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Mức độ nhận thức", bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Yêu cầu cần đạt", bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Số câu hỏi theo mức độ nhận thức", bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 16, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng", bold: true })], alignment: AlignmentType.CENTER })], rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "STT", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Chương/Chủ đề", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nội dung/Đơn vị kiến thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Mức độ nhận thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Yêu cầu cần đạt", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Số câu hỏi theo mức độ nhận thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], columnSpan: 16, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                 ],
               }),
-              // Header Row 2
+              // Header Row 2: Question type names
               new TableRow({
+                tableHeader: true,
                 children: [
-                  ...TNKQ_QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl, size: 16 })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }))
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nhiều lựa chọn", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Đúng - sai", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Trả lời ngắn", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tự luận", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
+                ],
+              }),
+              // Header Row 3: Cognitive levels per question type
+              new TableRow({
+                tableHeader: true,
+                children: [
+                  ...QUESTION_TYPES.flatMap(() =>
+                    COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl, size: 14 })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }))
                   ),
-                  ...COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl, size: 16 })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER })),
                 ],
               }),
               // Data Rows
@@ -1247,9 +1292,52 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                       )) : <p className="text-gray-500 text-sm p-2">Không có chủ đề mẫu cho môn học và khối lớp này.</p>}
                   </div>
               </div>
-              
+
+              {/* --- Saved custom curriculum from file imports --- */}
+              {Object.keys(savedCustomTopics).length > 0 && (
+                <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-emerald-800 text-sm flex items-center gap-1.5">
+                      💾 Chương trình đã lưu từ file
+                      <span className="text-xs bg-emerald-600 text-white rounded-full px-2">{Object.values(savedCustomTopics).reduce((s: number, a) => s + a.length, 0)} bài</span>
+                    </h4>
+                    <button onClick={clearCustomCurriculum} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1" title="Xóa chương trình đã lưu">
+                      <Trash2 className="w-3 h-3" /> Xóa
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {Object.entries(savedCustomTopics).map(([chapter, lessons]) => (
+                      <div key={chapter}>
+                        <div className="flex items-center gap-1 bg-emerald-100 rounded-md px-2 py-1">
+                          <button
+                            onClick={() => (lessons as string[]).forEach(l => handleAddTopic(chapter, l))}
+                            className="flex-1 text-left text-xs font-semibold text-emerald-900 truncate"
+                            title={`Thêm tất cả bài trong: ${chapter}`}
+                          >
+                            {chapter}
+                          </button>
+                          <Plus className="w-3 h-3 text-emerald-600 flex-shrink-0 cursor-pointer" onClick={() => (lessons as string[]).forEach(l => handleAddTopic(chapter, l))} />
+                        </div>
+                        <div className="ml-2 mt-1 flex flex-wrap gap-1 pb-1">
+                          {(lessons as string[]).map(lesson => (
+                            <button
+                              key={lesson}
+                              onClick={() => handleAddTopic(chapter, lesson)}
+                              className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs rounded-full hover:bg-emerald-200 transition-colors flex items-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />{lesson}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                   <h4 className="font-semibold text-gray-600 mb-2 text-sm">2. Hoặc nhập nội dung tùy chỉnh</h4>
+
                   <form onSubmit={handleCustomSubmit} className="space-y-2">
                       <input 
                           type="text" 
