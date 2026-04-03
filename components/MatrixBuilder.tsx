@@ -68,6 +68,8 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
   const [aiResults, setAiResults] = useState<any[]>([]);
   const [isParsingMatrix, setIsParsingMatrix] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const curriculumFileRef = useRef<HTMLInputElement>(null);
+  const [isImportingCurriculum, setIsImportingCurriculum] = useState(false);
 
   // State for the new integrated topic adder
   const [customChapter, setCustomChapter] = useState('');
@@ -395,9 +397,96 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if(customChapter.trim() && customContent.trim()){
-        addTopic(customChapter.trim(), customContent.trim());
+        handleAddTopic(customChapter.trim(), customContent.trim());
         setCustomContent('');
     }
+  };
+
+  const handleImportCurriculumFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImportingCurriculum(true);
+    try {
+      const text = await file.text();
+      const newTopics: ContentRow[] = [];
+
+      // Detect format: JSON object {chapter: [lesson,...]} or array [{chapterName, contentName}]
+      if (file.name.endsWith('.json')) {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+          // [{chapterName, contentName, learningOutcomes?}]
+          parsed.forEach((item: any, idx: number) => {
+            if (item.chapterName && item.contentName) {
+              newTopics.push({
+                id: `import-${Date.now()}-${idx}`,
+                chapterName: item.chapterName,
+                contentName: item.contentName,
+                questions: {},
+                learningOutcomes: item.learningOutcomes || {},
+              });
+            }
+          });
+        } else if (typeof parsed === 'object') {
+          // {"Chapter A": ["Lesson 1", "Lesson 2"], ...}
+          Object.entries(parsed).forEach(([chapter, lessons], ci) => {
+            const lessonList = Array.isArray(lessons) ? lessons : [lessons];
+            (lessonList as string[]).forEach((lesson, li) => {
+              newTopics.push({
+                id: `import-${Date.now()}-${ci}-${li}`,
+                chapterName: chapter,
+                contentName: typeof lesson === 'string' ? lesson : (lesson as any).contentName || String(lesson),
+                questions: {},
+                learningOutcomes: typeof lesson === 'object' ? (lesson as any).learningOutcomes || {} : {},
+              });
+            });
+          });
+        }
+      } else {
+        // CSV / TXT: each line "Chapter | Lesson" or "Chapter\tLesson"
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        // If first line looks like a header, skip it
+        const dataLines = lines[0]?.toLowerCase().includes('chương') || lines[0]?.toLowerCase().includes('chapter') ? lines.slice(1) : lines;
+        dataLines.forEach((line, idx) => {
+          const sep = line.includes('|') ? '|' : line.includes('\t') ? '\t' : ';';
+          const parts = line.split(sep).map(p => p.trim());
+          if (parts.length >= 2 && parts[0] && parts[1]) {
+            newTopics.push({
+              id: `import-${Date.now()}-${idx}`,
+              chapterName: parts[0],
+              contentName: parts[1],
+              questions: {},
+              learningOutcomes: {},
+            });
+          }
+        });
+      }
+
+      if (newTopics.length === 0) {
+        alert('Không đọc được nội dung từ file. Hãy kiểm tra lại định dạng file (JSON hoặc CSV với dấu |).');
+        return;
+      }
+
+      const newMatrix = { ...matrix, topics: [...matrix.topics, ...newTopics] };
+      setMatrix(newMatrix);
+      onMatrixUpdate(newMatrix);
+      alert(`✅ Đã nạp ${newTopics.length} nội dung từ file "${file.name}"!`);
+    } catch (err) {
+      alert(`Lỗi khi đọc file: ${err instanceof Error ? err.message : 'Không xác định'}`);
+    } finally {
+      setIsImportingCurriculum(false);
+      if (curriculumFileRef.current) curriculumFileRef.current.value = '';
+    }
+  };
+
+  const downloadCurriculumTemplate = () => {
+    const json = JSON.stringify({
+      'Chương 1: Tên chương': ['Tên bài 1', 'Tên bài 2', 'Tên bài 3'],
+      'Chương 2: Tên chương': ['Tên bài 1', 'Tên bài 2']
+    }, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'mau-chuong-trinh.json'; a.click();
+    URL.revokeObjectURL(url);
   };
 
     const totals = useMemo(() => {
@@ -1171,6 +1260,45 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                           Thêm
                       </button>
                   </form>
+              </div>
+
+              {/* --- Section 3: Import from file --- */}
+              <div className="border-t border-dashed border-gray-300 pt-4">
+                <h4 className="font-semibold text-gray-600 mb-1 text-sm flex items-center gap-2">
+                  <FileUp className="w-4 h-4 text-emerald-600" />
+                  3. Nạp chương trình từ File
+                </h4>
+                <p className="text-xs text-gray-500 mb-3">
+                  Hỗ trợ: <span className="font-mono bg-gray-100 px-1 rounded">.json</span>, <span className="font-mono bg-gray-100 px-1 rounded">.csv</span>, <span className="font-mono bg-gray-100 px-1 rounded">.txt</span> — mỗi dòng: <span className="font-mono bg-gray-100 px-1 rounded">Chương | Tên bài</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={curriculumFileRef}
+                    type="file"
+                    accept=".json,.csv,.txt"
+                    className="hidden"
+                    onChange={handleImportCurriculumFile}
+                  />
+                  <button
+                    onClick={() => curriculumFileRef.current?.click()}
+                    disabled={isImportingCurriculum}
+                    className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition disabled:opacity-50"
+                  >
+                    {isImportingCurriculum ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <FileUp className="w-4 h-4" />
+                    )}
+                    {isImportingCurriculum ? 'Đang xử lý...' : 'Chọn file'}
+                  </button>
+                  <button
+                    onClick={downloadCurriculumTemplate}
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-200 transition border border-gray-300"
+                    title="Tải file mẫu JSON để điền chương trình"
+                  >
+                    📥 Tải file mẫu
+                  </button>
+                </div>
               </div>
             </div>
 
