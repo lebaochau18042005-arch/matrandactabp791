@@ -1,10 +1,11 @@
 import * as pdfjs from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
-// Set worker source for pdfjs
-// In a standard Vite setup, we might need to point to a CDN or local file.
-// For this environment, we'll try to use the default or a CDN.
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set worker source for pdfjs - use local bundled worker to avoid CDN fetch failures
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).href;
 
 export async function extractTextFromPdf(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
