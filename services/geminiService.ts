@@ -426,21 +426,29 @@ ${documentContext}
     *   Tách biệt rõ ràng 3 phần: **I. ĐỀ BÀI**, **II. ĐÁP ÁN**, và **III. LỜI GIẢI CHI TIẾT**.
     *   Trong phần **ĐÁP ÁN**, trình bày dưới dạng bảng hoặc danh sách ngắn gọn (ví dụ: 1. A, 2. B, ...).
     *   Trong phần **LỜI GIẢI CHI TIẾT**, giải thích cặn kẽ, rõ ràng tại sao đáp án đó lại đúng, đặc biệt với các câu hỏi mức độ Hiểu và Vận dụng.
-4.  **LƯU Ý ĐẶC BIỆT VỀ DẠNG CÂU HỎI "ĐÚNG - SAI" (BẮT BUỘC THEO ĐÚNG CẤU TRÚC BGD BAN HÀNH)**:
-    *   Mỗi câu hỏi Đúng - Sai là **một bài toán độc lập**, KHÔNG phải dạng nhiều lựa chọn A/B/C/D. TUYỆT ĐỐI KHÔNG tạo định dạng "Nhận định 1, 2 đúng; nhận định 3, 4 sai" theo kiểu combo.
-    *   **Cấu trúc đúng chuẩn BGD** cho MỖI câu hỏi Đúng - Sai:
-        - Bắt đầu bằng **đoạn thông tin/ngữ cảnh** (có thể là đoạn văn, bảng số liệu, hoặc đoạn trích tư liệu).
-        - Tiếp theo là **4 nhận định** được đánh dấu bằng chữ thường: **a)**, **b)**, **c)**, **d)**.
-        - Học sinh sẽ phán đoán từng nhận định một (a, b, c, d) là **Đúng** hay **Sai** hoàn toàn độc lập với nhau.
-        - **KHÔNG** có phần "Chọn đáp án A/B/C/D" sau các nhận định.
-    *   **Ví dụ cấu trúc đúng (VÍ DỤ ĐỂ THAM KHẢO):**
-        Câu X: Cho bảng số liệu sau: [...] Dựa vào bảng số liệu, hãy xác định các nhận định sau là Đúng hay Sai:
-        a) Dân số vùng Đông Nam Bộ tăng liên tục giai đoạn 2000-2020.  [Đúng/Sai]
-        b) Mật độ dân số năm 2020 cao hơn năm 2010.                    [Đúng/Sai]
-        c) Tỉ lệ dân thành thị của vùng luôn cao hơn 50%.             [Đúng/Sai]
-        d) Tốc độ tăng dân số giai đoạn 2010-2020 chậm hơn 2000-2010.[Đúng/Sai]
-    *   Trong phần **ĐÁP ÁN**, ghi rõ: "Câu X: a) Đúng, b) Sai, c) Đúng, d) Sai".
-    *   Trong phần **LỜI GIẢI**, giải thích từng nhận định a/b/c/d.
+4.  **LƯU Ý ĐẶC BIỆT VỀ DẠNG CÂU HỎI "ĐÚNG - SAI" (BẮT BUỘC THEO ĐÚNG CẤU TRÚC BGD 2025)**:
+
+    > **⚠️ QUAN TRỌNG - ĐỌC KỸ TRƯỚC KHI TẠO CÂU HỎI ĐÚNG/SAI:**
+    > Trong ma trận, khi ghi "Đúng/Sai: Biết 1, Hiểu 1, Vận dụng 1, Vận dụng cao 1" KHÔNG CÓ NGHĨA là tạo ra 4 câu hỏi riêng lẻ. Đây là CHỈ DẪN VỀ MỨC ĐỘ CÂU HỎI cho 4 nhận định a/b/c/d BÊN TRONG MỘT CÂU DUY NHẤT.
+
+    *   **Cấu trúc CỦA MỖI CÂU Đúng/Sai theo BGD 2025:**
+        - **1 câu Đúng/Sai** = 1 đoạn ngữ cảnh/thông tin + **đúng 4 nhận định a/b/c/d**
+        - Nhận định **a)** → mức độ **Nhận biết** (sự kiện cơ bản, ghi nhớ thông tin)
+        - Nhận định **b)** → mức độ **Thông hiểu** (giải thích, so sánh nguyên nhân-kết quả)
+        - Nhận định **c)** → mức độ **Vận dụng** (áp dụng kiến thức vào tình huống mới)
+        - Nhận định **d)** → mức độ **Vận dụng cao** (phân tích, đánh giá, đề xuất giải pháp)
+        - Độ khó TĂNG DẦN từ a → d.
+    *   **Cấu trúc trình bày đúng chuẩn BGD:**
+        Câu X: [Đoạn thông tin/ngữ cảnh/bảng số liệu làm cơ sở cho cả 4 nhận định]
+        Dựa vào thông tin trên, hãy xác định các nhận định sau là Đúng hay Sai:
+        a) [Nhận định mức NHẬN BIẾT - đơn giản, nhớ/nhận ra sự kiện]         → Đúng/Sai
+        b) [Nhận định mức THÔNG HIỂU - giải thích, phân biệt nguyên nhân]    → Đúng/Sai
+        c) [Nhận định mức VẬN DỤNG - áp dụng kiến thức vào tình huống cụ thể]→ Đúng/Sai
+        d) [Nhận định mức VẬN DỤNG CAO - phân tích, đánh giá đa chiều]       → Đúng/Sai
+    *   Trong phần **ĐÁP ÁN**: "Câu X: a) Đúng, b) Sai, c) Đúng, d) Sai"
+    *   Trong phần **LỜI GIẢI**: giải thích lý do đúng/sai cho từng nhận định a/b/c/d theo đúng mức độ nhận thức tương ứng.
+    *   **TUYỆT ĐỐI KHÔNG**: tạo 4 câu hỏi Đúng/Sai riêng lẻ (mỗi câu cho 1 mức độ). Sai hoàn toàn với chuẩn BGD 2025.
+
 5.  **LƯU Ý ĐẶC BIỆT VỀ DẠNG CÂU HỎI "TRẢ LỜI NGẮN"**:
     *   Tất cả các câu hỏi thuộc dạng "Trả lời ngắn" (Dạng thức 3) BẮT BUỘC phải là dạng câu hỏi tính toán dựa trên số liệu (đặc biệt cho năng lực Tìm hiểu địa lí - NL2).
     *   Bạn phải cung cấp số liệu cần thiết (có thể dưới dạng bảng hoặc đoạn văn) và nêu rõ yêu cầu tính toán (ví dụ: tính mật độ dân số, tỉ lệ gia tăng dân số, cơ cấu kinh tế, sản lượng trung bình,...).
