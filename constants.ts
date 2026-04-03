@@ -712,10 +712,238 @@ export const SAMPLE_TOPICS_BY_GRADE_BIOLOGY: { [grade: number]: { [chapter: stri
     ],
     "Sinh học tế bào": [
       { contentName: "Thành phần hóa học của tế bào" },
-      { contentName: "Cấu trúc tế bào" }
+      { contentName: "Cấu trúc tế bào" },
+      { contentName: "Chuyển hóa vật chất và năng lượng trong tế bào" },
+      { contentName: "Thông tin tế bào" },
+      { contentName: "Chu kì tế bào và phân bào" }
+    ],
+    "Vi sinh vật": [
+      { contentName: "Vi sinh vật và các phương pháp nghiên cứu vi sinh vật" },
+      { contentName: "Sinh trưởng và sinh sản của vi sinh vật" },
+      { contentName: "Một số ứng dụng vi sinh vật trong thực tiễn" }
+    ]
+  },
+  11: {
+    "Trao đổi chất và chuyển hóa năng lượng": [
+      {
+        contentName: "Khái quát về trao đổi chất và chuyển hóa năng lượng",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu được khái niệm trao đổi chất và chuyển hóa năng lượng ở sinh vật. Mô tả được vai trò của ATP trong trao đổi chất và chuyển hóa năng lượng.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích được mối quan hệ giữa trao đổi chất và chuyển hóa năng lượng.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức về trao đổi chất để giải thích một số hiện tượng thực tiễn."
+        }
+      },
+      {
+        contentName: "Trao đổi nước và khoáng ở thực vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Mô tả được quá trình hấp thụ nước và khoáng ở rễ, vận chuyển nước qua thân, thoát hơi nước qua lá.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích được vai trò của thoát hơi nước, giải thích cơ chế đóng mở khí khổng.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức vào thực tiễn trồng trọt: tưới nước, bón phân hợp lý."
+        }
+      },
+      {
+        contentName: "Quang hợp ở thực vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu được khái niệm, nguyên liệu, sản phẩm và phương trình tổng quát của quang hợp. Mô tả được pha sáng và pha tối của quang hợp.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích được mối quan hệ giữa pha sáng và pha tối. So sánh con đường C3, C4, CAM.",
+          [CognitiveLevel.APPLICATION]: "Giải thích ảnh hưởng của các nhân tố ngoại cảnh tới quang hợp và ứng dụng trong nông nghiệp."
+        }
+      },
+      {
+        contentName: "Hô hấp ở thực vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm, vai trò, phương trình tổng quát của hô hấp tế bào. Mô tả các giai đoạn đường phân, chu trình Krebs, chuỗi chuyền electron.",
+          [CognitiveLevel.COMPREHENSION]: "Phân biệt hô hấp hiếu khí và kị khí. Phân tích mối quan hệ giữa quang hợp và hô hấp.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức hô hấp vào bảo quản nông sản, thực phẩm."
+        }
+      },
+      {
+        contentName: "Dinh dưỡng và tiêu hóa ở động vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu được các nhóm dinh dưỡng. Mô tả cấu tạo và chức năng các cơ quan tiêu hóa của người.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích quá trình tiêu hóa cơ học và hóa học. So sánh tiêu hóa nội bào và ngoại bào.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức xây dựng chế độ ăn uống hợp lý, phòng chống các bệnh tiêu hóa."
+        }
+      },
+      {
+        contentName: "Hô hấp ở động vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Mô tả được các hình thức hô hấp ở động vật (qua bề mặt cơ thể, mang, phổi, ống khí).",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích cơ chế trao đổi khí ở phổi và tế bào.",
+          [CognitiveLevel.APPLICATION]: "Giải thích ảnh hưởng của ô nhiễm không khí đến hô hấp, liên hệ bảo vệ sức khỏe."
+        }
+      },
+      {
+        contentName: "Tuần hoàn máu",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Mô tả cấu tạo và chức năng của máu, tim và hệ mạch. Phân biệt hệ tuần hoàn hở và kín, đơn và kép.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích cơ chế điều hòa hoạt động tim mạch.",
+          [CognitiveLevel.APPLICATION]: "Giải thích các chỉ số huyết áp, nhịp tim và liên hệ phòng chống bệnh tim mạch."
+        }
+      }
+    ],
+    "Cảm ứng": [
+      {
+        contentName: "Cảm ứng ở thực vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm cảm ứng. Mô tả các loại hướng động và ứng động ở thực vật.",
+          [CognitiveLevel.COMPREHENSION]: "Phân biệt hướng động và ứng động. Giải thích cơ chế của một số hướng động.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức cảm ứng thực vật vào thực tiễn trồng trọt."
+        }
+      },
+      {
+        contentName: "Cảm ứng ở động vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Mô tả cấu tạo và chức năng của hệ thần kinh. Nêu cơ chế dẫn truyền xung thần kinh qua synapse.",
+          [CognitiveLevel.COMPREHENSION]: "Phân biệt phản xạ có điều kiện và không điều kiện. Phân tích chức năng các bộ phận của não.",
+          [CognitiveLevel.APPLICATION]: "Giải thích tác hại của các chất kích thích thần kinh; liên hệ bảo vệ sức khỏe hệ thần kinh."
+        }
+      }
+    ],
+    "Sinh trưởng và phát triển": [
+      {
+        contentName: "Sinh trưởng và phát triển ở thực vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm sinh trưởng, phát triển. Mô tả vai trò các hormone thực vật (auxin, gibberellin, cytokinin, ethylene, ABA).",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích các nhân tố ảnh hưởng đến sinh trưởng và phát triển thực vật.",
+          [CognitiveLevel.APPLICATION]: "Ứng dụng hormone thực vật trong nông nghiệp (kích thích ra rễ, tạo quả không hạt...)."
+        }
+      },
+      {
+        contentName: "Sinh trưởng và phát triển ở động vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu được khái niệm sinh trưởng và phát triển ở động vật. Phân biệt phát triển qua biến thái và không qua biến thái.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích vai trò hormone tăng trưởng, hormone sinh dục, thyroxine trong điều hòa sinh trưởng.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức giải thích các hiện tượng sinh trưởng và phát triển bất thường."
+        }
+      }
+    ],
+    "Sinh sản": [
+      {
+        contentName: "Sinh sản ở thực vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Phân biệt sinh sản vô tính và hữu tính ở thực vật. Mô tả quá trình thụ phấn, thụ tinh, hình thành hạt và quả.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích ưu nhược điểm của sinh sản vô tính và hữu tính.",
+          [CognitiveLevel.APPLICATION]: "Ứng dụng các phương pháp nhân giống vô tính (chiết, ghép, nuôi cấy mô) trong sản xuất nông nghiệp."
+        }
+      },
+      {
+        contentName: "Sinh sản ở động vật",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Phân biệt sinh sản vô tính và hữu tính ở động vật. Mô tả quá trình thụ tinh, phát triển phôi thai ở người.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích cơ chế điều hòa hormone trong sinh sản. So sánh thụ tinh ngoài và thụ tinh trong.",
+          [CognitiveLevel.APPLICATION]: "Giải thích cơ sở khoa học của các biện pháp tránh thai; phòng tránh các bệnh lây truyền qua đường tình dục."
+        }
+      }
+    ]
+  },
+  12: {
+    "Di truyền học": [
+      {
+        contentName: "Cơ chế di truyền và biến dị cấp độ phân tử (ADN, Gen, Mã di truyền)",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Mô tả cấu trúc và chức năng của ADN, ARN, protein. Nêu đặc điểm của mã di truyền (bộ ba, thoái hóa, đặc hiệu, phổ biến).",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích cơ chế tự nhân đôi ADN, phiên mã (transcription), dịch mã (translation). Giải thích nguyên tắc bổ sung, nguyên tắc khuôn mẫu.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng giải bài tập ADN/ARN/Protein (tính số nu, tỉ lệ các loại, trình tự bổ sung). Giải thích các đột biến gen và hậu quả."
+        }
+      },
+      {
+        contentName: "Nhiễm sắc thể và cơ chế di truyền cấp độ tế bào",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Mô tả cấu trúc NST, bộ NST lưỡng bội, đơn bội. Nêu các giai đoạn nguyên phân và giảm phân.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích ý nghĩa của nguyên phân và giảm phân. Giải thích cơ sở tế bào học của các quy luật di truyền.",
+          [CognitiveLevel.APPLICATION]: "Giải bài tập nguyên phân, giảm phân (số tế bào, số NST, số giao tử). Giải thích đột biến NST và hậu quả (thể lệch bội, đa bội)."
+        }
+      },
+      {
+        contentName: "Quy luật di truyền của Mendel",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Phát biểu quy luật phân ly và quy luật phân ly độc lập. Nêu điều kiện nghiệm đúng của quy luật Mendel.",
+          [CognitiveLevel.COMPREHENSION]: "Giải thích cơ sở tế bào học của quy luật Mendel. Phân tích tỉ lệ phân ly ở F2.",
+          [CognitiveLevel.APPLICATION]: "Giải bài toán di truyền 1 và 2 cặp tính trạng (lập sơ đồ lai, xác định kiểu gen, kiểu hình, tỉ lệ phân ly)."
+        }
+      },
+      {
+        contentName: "Các quy luật di truyền khác (Liên kết gen, Hoán vị gen, Di truyền giới tính, Di truyền ngoài nhân)",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu đặc điểm liên kết gen hoàn toàn, hoán vị gen, di truyền liên kết với giới tính, di truyền ngoài nhân (qua tế bào chất).",
+          [CognitiveLevel.COMPREHENSION]: "Giải thích tần số hoán vị gen và bản đồ gen. Phân biệt di truyền theo dòng mẹ và di truyền NST giới tính.",
+          [CognitiveLevel.APPLICATION]: "Giải bài toán liên kết gen – hoán vị gen. Xác định tỉ lệ kiểu hình trong di truyền liên kết giới tính (gen trên NST X, Y)."
+        }
+      },
+      {
+        contentName: "Tương tác gen và tác động đa hiệu của gen",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm tương tác gen bổ sung, cộng gộp, át chế. Nêu khái niệm gen đa hiệu.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích sự khác biệt về tỉ lệ phân ly F2 khi có tương tác gen so với Mendel.",
+          [CognitiveLevel.APPLICATION]: "Giải bài tập tương tác gen (xác định tỉ lệ kiểu hình bất thường 9:3:3:1, 9:7, 9:6:1, 13:3...)."
+        }
+      },
+      {
+        contentName: "Di truyền học quần thể",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm quần thể tự phối và giao phối ngẫu nhiên. Phát biểu định luật Hardy-Weinberg.",
+          [CognitiveLevel.COMPREHENSION]: "Giải thích điều kiện nghiệm đúng của định luật Hardy-Weinberg. Phân tích sự thay đổi tần số alen khi quần thể tự phối.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng định luật Hardy-Weinberg tính tần số alen, tần số kiểu gen trong quần thể ngẫu phối. Giải bài tập di truyền quần thể."
+        }
+      },
+      {
+        contentName: "Ứng dụng di truyền học: Chọn giống và Công nghệ gen",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu các phương pháp chọn giống thực vật và động vật (gây đột biến, lai giống, đa bội hóa). Mô tả các bước tạo ADN tái tổ hợp và ứng dụng.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích ưu nhược điểm của từng phương pháp chọn giống. Giải thích nguyên lý của PCR, liệu pháp gen.",
+          [CognitiveLevel.APPLICATION]: "Đánh giá tác động của GMO, liệu pháp gen đối với y học và nông nghiệp; liên hệ đạo đức sinh học."
+        }
+      }
+    ],
+    "Tiến hóa": [
+      {
+        contentName: "Bằng chứng và cơ chế tiến hóa",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu các bằng chứng tiến hóa (giải phẫu so sánh, phôi sinh học, địa lí sinh vật, hóa thạch, sinh học phân tử). Nêu học thuyết Lamarck, Darwin, thuyết tiến hóa tổng hợp hiện đại.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích các nhân tố tiến hóa: đột biến, di nhập gen, chọn lọc tự nhiên, các yếu tố ngẫu nhiên, giao phối không ngẫu nhiên. Giải thích cơ chế hình thành loài mới.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng lý thuyết tiến hóa giải thích sự thích nghi của sinh vật và sự phân ly tính trạng trong quần thể."
+        }
+      },
+      {
+        contentName: "Sự phát sinh và phát triển của sự sống trên Trái Đất",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Trình bày được các giai đoạn hình thành sự sống: tiến hóa hóa học, tiền sinh học. Nêu sơ lược lịch sử phát triển sinh vật qua các đại địa chất.",
+          [CognitiveLevel.COMPREHENSION]: "Giải thích cơ sở hóa học của sự sống sơ khai (thí nghiệm Miller). Phân tích sự tiến hóa từ đơn bào đến đa bào.",
+          [CognitiveLevel.APPLICATION]: "Liên hệ lịch sử tiến hóa với sự xuất hiện các nhóm sinh vật hiện nay."
+        }
+      }
+    ],
+    "Sinh thái học": [
+      {
+        contentName: "Sinh thái học cá thể và quần thể",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm môi trường, nhân tố sinh thái, giới hạn sinh thái và ổ sinh thái. Nêu các đặc trưng cơ bản của quần thể (mật độ, tỉ lệ giới tính, tháp tuổi, tốc độ tăng trưởng).",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích các nhân tố ảnh hưởng đến kích thước quần thể. Giải thích tăng trưởng theo tiềm năng sinh học và theo nguồn sống. Phân tích các mối quan hệ trong quần thể.",
+          [CognitiveLevel.APPLICATION]: "Vận dụng kiến thức quần thể để giải bài tập dân số (tính tốc độ tăng trưởng, dự báo dân số). Liên hệ bảo vệ quần thể sinh vật quý hiếm."
+        }
+      },
+      {
+        contentName: "Quần xã sinh vật và Hệ sinh thái",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm quần xã, hệ sinh thái, sinh quyển. Mô tả các thành phần của hệ sinh thái (sinh vật sản xuất, tiêu thụ, phân giải, môi trường vô sinh). Nêu các dạng hình tháp sinh thái.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích các mối quan hệ giữa các loài trong quần xã. Giải thích diễn thế sinh thái nguyên sinh và thứ sinh. Phân tích dòng năng lượng và chu trình vật chất trong hệ sinh thái.",
+          [CognitiveLevel.APPLICATION]: "Tính hiệu suất sinh thái, năng suất sinh học tại các bậc dinh dưỡng. Đề xuất biện pháp bảo vệ đa dạng sinh học và quản lý hệ sinh thái bền vững."
+        }
+      },
+      {
+        contentName: "Môi trường và các nhân tố sinh thái",
+        learningOutcomes: {
+          [CognitiveLevel.KNOWLEDGE]: "Nêu khái niệm ô nhiễm môi trường, các tác nhân gây ô nhiễm. Trình bày nguyên nhân suy giảm đa dạng sinh học.",
+          [CognitiveLevel.COMPREHENSION]: "Phân tích hậu quả của ô nhiễm môi trường (biến đổi khí hậu, thủng tầng ozone, mưa acid). Giải thích tầm quan trọng của đa dạng sinh học.",
+          [CognitiveLevel.APPLICATION]: "Đề xuất các biện pháp bảo vệ môi trường và bảo tồn đa dạng sinh học. Liên hệ trách nhiệm cá nhân trong bảo vệ môi trường."
+        }
+      }
     ]
   }
 };
+
+
 
 export const SAMPLE_TOPICS_BY_GRADE_TECHNOLOGY: { [grade: number]: { [chapter: string]: SampleContent[] } } = {
   10: {
