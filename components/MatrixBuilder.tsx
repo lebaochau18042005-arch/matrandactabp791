@@ -407,62 +407,76 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
     if (!file) return;
     setIsImportingCurriculum(true);
     try {
-      const text = await file.text();
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
       const newTopics: ContentRow[] = [];
 
-      // Detect format: JSON object {chapter: [lesson,...]} or array [{chapterName, contentName}]
-      if (file.name.endsWith('.json')) {
+      if (ext === 'json') {
+        // --- JSON format ---
+        const text = await file.text();
         const parsed = JSON.parse(text);
         if (Array.isArray(parsed)) {
-          // [{chapterName, contentName, learningOutcomes?}]
           parsed.forEach((item: any, idx: number) => {
             if (item.chapterName && item.contentName) {
-              newTopics.push({
-                id: `import-${Date.now()}-${idx}`,
-                chapterName: item.chapterName,
-                contentName: item.contentName,
-                questions: {},
-                learningOutcomes: item.learningOutcomes || {},
-              });
+              newTopics.push({ id: `import-${Date.now()}-${idx}`, chapterName: item.chapterName, contentName: item.contentName, questions: {}, learningOutcomes: item.learningOutcomes || {} });
             }
           });
         } else if (typeof parsed === 'object') {
-          // {"Chapter A": ["Lesson 1", "Lesson 2"], ...}
           Object.entries(parsed).forEach(([chapter, lessons], ci) => {
             const lessonList = Array.isArray(lessons) ? lessons : [lessons];
-            (lessonList as string[]).forEach((lesson, li) => {
-              newTopics.push({
-                id: `import-${Date.now()}-${ci}-${li}`,
-                chapterName: chapter,
-                contentName: typeof lesson === 'string' ? lesson : (lesson as any).contentName || String(lesson),
-                questions: {},
-                learningOutcomes: typeof lesson === 'object' ? (lesson as any).learningOutcomes || {} : {},
-              });
+            (lessonList as any[]).forEach((lesson: any, li: number) => {
+              newTopics.push({ id: `import-${Date.now()}-${ci}-${li}`, chapterName: chapter, contentName: typeof lesson === 'string' ? lesson : (lesson.contentName || String(lesson)), questions: {}, learningOutcomes: typeof lesson === 'object' ? (lesson.learningOutcomes || {}) : {} });
             });
           });
         }
-      } else {
-        // CSV / TXT: each line "Chapter | Lesson" or "Chapter\tLesson"
+      } else if (ext === 'csv' || ext === 'txt') {
+        // --- CSV/TXT format: "Chapter | Lesson" per line ---
+        const text = await file.text();
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-        // If first line looks like a header, skip it
-        const dataLines = lines[0]?.toLowerCase().includes('chương') || lines[0]?.toLowerCase().includes('chapter') ? lines.slice(1) : lines;
+        const dataLines = /chương|chapter/i.test(lines[0] || '') ? lines.slice(1) : lines;
         dataLines.forEach((line, idx) => {
           const sep = line.includes('|') ? '|' : line.includes('\t') ? '\t' : ';';
           const parts = line.split(sep).map(p => p.trim());
           if (parts.length >= 2 && parts[0] && parts[1]) {
-            newTopics.push({
-              id: `import-${Date.now()}-${idx}`,
-              chapterName: parts[0],
-              contentName: parts[1],
-              questions: {},
-              learningOutcomes: {},
-            });
+            newTopics.push({ id: `import-${Date.now()}-${idx}`, chapterName: parts[0], contentName: parts[1], questions: {}, learningOutcomes: {} });
           }
         });
+      } else if (ext === 'pdf' || ext === 'docx' || ext === 'doc') {
+        // --- PDF / DOCX: extract text then heuristic parse ---
+        const { extractTextFromFile } = await import('../services/fileService');
+        const raw = await extractTextFromFile(file);
+        const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+        
+        let currentChapter = '';
+        const chapterPat = /^(chương|phần|mô[- ]?đun|chapter|module|unit)\s+[\divxIVX]+[.:)–-]?\s*/i;
+        const lessonPat  = /^(bài|tiết|chủ đề|lesson|topic|nội dung)\s+[\divxIVX\d]+[.:)–-]?\s*/i;
+        const numPat     = /^\d+[.)]\s+\S/; // "1. Something"
+
+        lines.forEach((line, idx) => {
+          if (chapterPat.test(line)) {
+            currentChapter = line.replace(/\s+/g, ' ').slice(0, 120);
+          } else if (currentChapter) {
+            if (lessonPat.test(line) || (numPat.test(line) && line.length < 150)) {
+              const lessonName = line.replace(/\s+/g, ' ').slice(0, 200);
+              newTopics.push({ id: `import-pdf-${Date.now()}-${idx}`, chapterName: currentChapter, contentName: lessonName, questions: {}, learningOutcomes: {} });
+            }
+          }
+        });
+
+        // Fallback: if no structure found, group consecutive non-empty lines as lessons under a default chapter
+        if (newTopics.length === 0) {
+          lines.slice(0, 100).forEach((line, idx) => {
+            if (line.length > 5 && line.length < 200) {
+              newTopics.push({ id: `import-pdf-fb-${idx}`, chapterName: 'Nội dung từ file', contentName: line, questions: {}, learningOutcomes: {} });
+            }
+          });
+        }
+      } else {
+        alert('Định dạng không hỗ trợ. Hãy dùng .json, .csv, .txt, .pdf hoặc .docx');
+        return;
       }
 
       if (newTopics.length === 0) {
-        alert('Không đọc được nội dung từ file. Hãy kiểm tra lại định dạng file (JSON hoặc CSV với dấu |).');
+        alert('Không đọc được nội dung từ file.\n\nVới PDF: cần có các dòng bắt đầu bằng "Chương X" và "Bài X".\nVới JSON/CSV: kiểm tra lại định dạng file mẫu.');
         return;
       }
 
@@ -480,14 +494,15 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
 
   const downloadCurriculumTemplate = () => {
     const json = JSON.stringify({
-      'Chương 1: Tên chương': ['Tên bài 1', 'Tên bài 2', 'Tên bài 3'],
-      'Chương 2: Tên chương': ['Tên bài 1', 'Tên bài 2']
+      'Chương 1: Tên chương thứ nhất': ['Tên bài học 1', 'Tên bài học 2', 'Tên bài học 3'],
+      'Chương 2: Tên chương thứ hai': ['Tên bài học 1', 'Tên bài học 2']
     }, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'mau-chuong-trinh.json'; a.click();
     URL.revokeObjectURL(url);
   };
+
 
     const totals = useMemo(() => {
     const totalsByCogLevel: { [key in CognitiveLevel]: { count: number, points: number, tnkqCount: number, essayCount: number, essayParts: EssayQuestion[] } } = {
@@ -1269,13 +1284,14 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                   3. Nạp chương trình từ File
                 </h4>
                 <p className="text-xs text-gray-500 mb-3">
-                  Hỗ trợ: <span className="font-mono bg-gray-100 px-1 rounded">.json</span>, <span className="font-mono bg-gray-100 px-1 rounded">.csv</span>, <span className="font-mono bg-gray-100 px-1 rounded">.txt</span> — mỗi dòng: <span className="font-mono bg-gray-100 px-1 rounded">Chương | Tên bài</span>
+                  Hỗ trợ: <span className="font-mono bg-gray-100 px-1 rounded">.pdf</span>, <span className="font-mono bg-gray-100 px-1 rounded">.docx</span>, <span className="font-mono bg-gray-100 px-1 rounded">.json</span>, <span className="font-mono bg-gray-100 px-1 rounded">.csv</span>, <span className="font-mono bg-gray-100 px-1 rounded">.txt</span><br/>
+                  PDF/DOCX: cần có dòng "<strong>Chương X</strong>" và "<strong>Bài X</strong>" • CSV/TXT: mỗi dòng <span className="font-mono">Chương | Tên bài</span>
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <input
                     ref={curriculumFileRef}
                     type="file"
-                    accept=".json,.csv,.txt"
+                    accept=".json,.csv,.txt,.pdf,.docx,.doc"
                     className="hidden"
                     onChange={handleImportCurriculumFile}
                   />
