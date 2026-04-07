@@ -11,6 +11,13 @@ export enum CognitiveLevel {
 
 export const COGNITIVE_LEVELS = Object.values(CognitiveLevel);
 
+// Chỉ 3 mức độ dùng trong MA TRẬN và BẢN ĐẶC TẢ (không có Vận dụng cao)
+export const DISPLAY_COGNITIVE_LEVELS = [
+  CognitiveLevel.KNOWLEDGE,
+  CognitiveLevel.COMPREHENSION,
+  CognitiveLevel.APPLICATION,
+] as const;
+
 export enum QuestionType {
   MULTIPLE_CHOICE = "Nhiều lựa chọn",
   TRUE_FALSE = "Đúng - sai",

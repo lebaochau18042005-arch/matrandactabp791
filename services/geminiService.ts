@@ -257,8 +257,14 @@ export async function generateLearningOutcome(
   subject: string,
   grade: number,
   contentName: string,
-  cognitiveLevel: CognitiveLevelType
+  cognitiveLevel: CognitiveLevelType,
+  curriculumOutcome?: string
 ): Promise<string> {
+  // Nếu đã tìm thấy YCCĐ trong chương trình đã nạp, trả về ngay — không cần gọi AI
+  if (curriculumOutcome && curriculumOutcome.trim()) {
+    console.info(`[AI] YCCĐ tìm thấy trong chương trình cho "${contentName}" - ${cognitiveLevel}, không cần gọi AI.`);
+    return curriculumOutcome.trim();
+  }
   const modelName = 'gemini-3-flash-preview';
   
   let subjectSpecificInstructions = '';
@@ -450,9 +456,21 @@ ${documentContext}
     *   **TUYỆT ĐỐI KHÔNG**: tạo 4 câu hỏi Đúng/Sai riêng lẻ (mỗi câu cho 1 mức độ). Sai hoàn toàn với chuẩn BGD 2025.
 
 5.  **LƯU Ý ĐẶC BIỆT VỀ DẠNG CÂU HỎI "TRẢ LỜI NGẮN"**:
-    *   Tất cả các câu hỏi thuộc dạng "Trả lời ngắn" (Dạng thức 3) BẮT BUỘC phải là dạng câu hỏi tính toán dựa trên số liệu (đặc biệt cho năng lực Tìm hiểu địa lí - NL2).
-    *   Bạn phải cung cấp số liệu cần thiết (có thể dưới dạng bảng hoặc đoạn văn) và nêu rõ yêu cầu tính toán (ví dụ: tính mật độ dân số, tỉ lệ gia tăng dân số, cơ cấu kinh tế, sản lượng trung bình,...).
-    *   Câu trả lời của học sinh sẽ là một con số (kèm theo đơn vị nếu có).
+    *   Tất cả các câu hỏi thuộc dạng "Trả lời ngắn" (Dạng thức 3) BẮT BUỘC phải là dạng câu hỏi **tính toán số liệu có công thức cụ thể** (năng lực Tìm hiểu địa lí - NL2). Câu trả lời là một **con số** (kèm đơn vị nếu có).
+    *   Bạn phải cung cấp đầy đủ số liệu đầu vào (bảng Markdown hoặc đoạn văn) và yêu cầu tính toán rõ ràng, làm tròn đến chữ số thập phân cụ thể.
+    *   **Các dạng tính toán ĐẶC TRƯNG cho môn Địa lí** — AI phải xoay vòng đa dạng các công thức sau, KHÔNG lặp lại cùng một dạng trong một đề:
+        - **Mật độ dân số** = Dân số (người) ÷ Diện tích (km²), đơn vị: người/km²
+        - **Tỉ lệ dân thành thị / nông thôn** = (Dân số thành thị ÷ Tổng dân số) × 100%, hoặc so sánh chênh lệch giữa hai năm
+        - **Tốc độ tăng trưởng** = ((Giá trị năm sau − Giá trị năm trước) ÷ Giá trị năm trước) × 100%
+        - **Tốc độ tăng trưởng trung bình** (CAGR đơn giản) = Tổng tăng ÷ Số năm (hoặc theo điểm phần trăm)
+        - **Tỉ trọng (cơ cấu)** = (Giá trị thành phần ÷ Tổng) × 100%, ví dụ: cơ cấu GDP, cơ cấu lao động
+        - **Tăng thêm / Giảm đi** (điểm phần trăm) = Giá trị năm sau − Giá trị năm trước (khi đã là %)
+        - **Năng suất lao động / Năng suất cây trồng** = Sản lượng ÷ Diện tích canh tác (tạ/ha hoặc tấn/ha), hoặc Doanh thu ÷ Số lao động
+        - **Sản lượng bình quân đầu người** = Tổng sản lượng ÷ Dân số, đơn vị: kg/người/năm hoặc tương đương
+        - **Cự ly vận chuyển trung bình** = Tổng hàng hóa luân chuyển (tấn.km) ÷ Tổng lượng hàng hóa (tấn)
+        - **Diện tích gieo trồng / Hệ số sử dụng đất** = Diện tích gieo trồng ÷ Diện tích canh tác
+        - **Tổng sản lượng** = Năng suất (tạ/ha) × Diện tích (ha), tính ngược lại từ số liệu cho trước
+        - **Giá trị xuất/nhập khẩu bình quân** hoặc **cán cân thương mại** = Xuất khẩu − Nhập khẩu
 6.  **YÊU CẦU BẮT BUỘC VỀ ĐỊNH DẠNG BẢNG SỐ LIỆU VÀ BIỂU ĐỒ**:
     *   Bất kỳ câu hỏi nào có **bảng số liệu** PHẢI trình bày dưới dạng bảng Markdown chuẩn (dùng |, ---, :---:) để rõ ràng, dễ đọc.
     *   Bất kỳ **con số, đơn vị, phép tính, tỉ lệ %** trong đề bài hoặc lời giải PHẢI được định dạng LaTeX: dùng $...$ cho inline (ví dụ: $1\,234\,567$ người, $85{,}6\%$) và $$...$$ cho công thức trên dòng riêng.

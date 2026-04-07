@@ -7,6 +7,7 @@ import {
   CognitiveLevel, 
   QUESTION_TYPES, 
   COGNITIVE_LEVELS,
+  DISPLAY_COGNITIVE_LEVELS,
   TNKQ_QUESTION_TYPES,
   ESSAY_QUESTION_TYPES,
   getCompetencyCode,
@@ -680,28 +681,28 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "STT" })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Chương/Chủ đề" })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nội dung/đơn vị kiến thức" })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Mức độ nhận thức" })], alignment: AlignmentType.CENTER })], columnSpan: 16, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng" })], alignment: AlignmentType.CENTER })], columnSpan: 4, rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Mức độ nhận thức" })], alignment: AlignmentType.CENTER })], columnSpan: 12, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng" })], alignment: AlignmentType.CENTER })], columnSpan: 3, rowSpan: 2, verticalAlign: VerticalAlign.CENTER }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tỉ lệ (%)\nđiểm" })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                 ],
               }),
               // Header Row 2
               new TableRow({
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nhiều lựa chọn" })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Đúng - sai" })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Trả lời ngắn" })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tự luận" })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nhiều lựa chọn" })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Đúng - sai" })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Trả lời ngắn" })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tự luận" })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                 ],
               }),
               // Header Row 3
               new TableRow({
                 children: [
                   ...TNKQ_QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }))
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }))
                   ),
-                  ...COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER })),
-                  ...COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER })),
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER })),
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER })),
                 ],
               }),
               // Data Rows
@@ -739,7 +740,7 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                     new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: topic.chapterName })] })] }),
                     new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: topic.contentName })] })] }),
                     ...TNKQ_QUESTION_TYPES.flatMap(qType => 
-                      COGNITIVE_LEVELS.map(cl => {
+                      DISPLAY_COGNITIVE_LEVELS.map(cl => {
                         const detail = (topic.questions[qType] as any)?.[cl];
                         const count = typeof detail === 'object' ? detail.count : (detail || 0);
                         const points = typeof detail === 'object' ? detail.pointsPerQuestion : (matrix.points[qType]?.[cl] || 0);
@@ -752,7 +753,7 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                       const text = detail?.id ? `${detail.id}${detail.isChart ? '📈' : ''}` : "";
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text })], alignment: AlignmentType.CENTER })] });
                     }),
-                    ...COGNITIVE_LEVELS.map(cl => {
+                    ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                       const count = rowTotals.totalsByCogLevel[cl].count;
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: count > 0 ? count.toString() : "" })], alignment: AlignmentType.CENTER })] });
                     }),
@@ -765,12 +766,12 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng số câu/lệnh hỏi", bold: true })] })], columnSpan: 3 }),
                   ...QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => {
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => {
                       const count = totals.totalsByQTypeAndCogLevel[qType]?.[cl]?.count || 0;
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: count > 0 ? count.toString() : "", bold: true })], alignment: AlignmentType.CENTER })] });
                     })
                   ),
-                  ...COGNITIVE_LEVELS.map(cl => {
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     const tnkq = totals.totalsByCogLevel[cl].tnkqCount;
                     const essayParts = totals.totalsByCogLevel[cl].essayParts;
                     const parts = [];
@@ -786,12 +787,12 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng số điểm", bold: true })] })], columnSpan: 3 }),
                   ...QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => {
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => {
                       const points = totals.totalsByQTypeAndCogLevel[qType]?.[cl]?.points || 0;
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: points > 0 ? points.toFixed(1).replace(/\.0$/, '') : "", bold: true })], alignment: AlignmentType.CENTER })] });
                     })
                   ),
-                  ...COGNITIVE_LEVELS.map(cl => {
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     const points = totals.totalsByCogLevel[cl].points;
                     return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: points > 0 ? points.toFixed(1).replace(/\.0$/, '') : "", bold: true })], alignment: AlignmentType.CENTER })] });
                   }),
@@ -803,13 +804,13 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tỉ lệ % (câu)", bold: true })] })], columnSpan: 3 }),
                   ...QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => {
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => {
                       const count = totals.totalsByQTypeAndCogLevel[qType]?.[cl]?.count || 0;
                       const text = totals.grandTotalCount > 0 && count > 0 ? (count / totals.grandTotalCount * 100).toFixed(1) + "%" : "";
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER });
                     })
                   ),
-                  ...COGNITIVE_LEVELS.map(cl => {
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     const percent = totals.grandTotalCount > 0 ? (totals.totalsByCogLevel[cl].count / totals.grandTotalCount * 100).toFixed(1) : '0.0';
                     return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${percent}%`, bold: true })], alignment: AlignmentType.CENTER })] });
                   }),
@@ -821,13 +822,13 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tỉ lệ % (điểm)", bold: true })] })], columnSpan: 3 }),
                   ...QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => {
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => {
                       const points = totals.totalsByQTypeAndCogLevel[qType]?.[cl]?.points || 0;
                       const text = matrix.header.totalPoints > 0 && points > 0 ? (points / matrix.header.totalPoints * 100).toFixed(1) + "%" : "";
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text, bold: true })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER });
                     })
                   ),
-                  ...COGNITIVE_LEVELS.map(cl => {
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     const percent = matrix.header.totalPoints > 0 ? (totals.totalsByCogLevel[cl].points / matrix.header.totalPoints * 100).toFixed(1) : '0.0';
                     return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${percent}%`, bold: true })], alignment: AlignmentType.CENTER })] });
                   }),
@@ -964,7 +965,7 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nội dung/Đơn vị kiến thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Mức độ nhận thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Yêu cầu cần đạt", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Số câu hỏi theo mức độ nhận thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], columnSpan: 16, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Số câu hỏi theo mức độ nhận thức", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], columnSpan: 12, verticalAlign: VerticalAlign.CENTER }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng", bold: true, size: 16 })], alignment: AlignmentType.CENTER })], rowSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                 ],
               }),
@@ -972,10 +973,10 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
               new TableRow({
                 tableHeader: true,
                 children: [
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nhiều lựa chọn", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Đúng - sai", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Trả lời ngắn", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
-                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tự luận", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 4, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Nhiều lựa chọn", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Đúng - sai", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Trả lời ngắn", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
+                  new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tự luận", bold: true, size: 14 })], alignment: AlignmentType.CENTER })], columnSpan: 3, verticalAlign: VerticalAlign.CENTER }),
                 ],
               }),
               // Header Row 3: Cognitive levels per question type
@@ -983,7 +984,7 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 tableHeader: true,
                 children: [
                   ...QUESTION_TYPES.flatMap(() =>
-                    COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl, size: 14 })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }))
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cl, size: 14 })], alignment: AlignmentType.CENTER })], verticalAlign: VerticalAlign.CENTER }))
                   ),
                 ],
               }),
@@ -1025,7 +1026,7 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 
                 // Question Grid
                 QUESTION_TYPES.forEach(qType => {
-                  COGNITIVE_LEVELS.forEach(cl => {
+                  DISPLAY_COGNITIVE_LEVELS.forEach(cl => {
                     let text = "";
                     if (row.cognitiveLevel === cl) {
                       const detail = (row.questions[qType] as any)?.[cl];
@@ -1065,7 +1066,7 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tổng cộng", bold: true })], alignment: AlignmentType.RIGHT })], columnSpan: 5 }),
                   ...QUESTION_TYPES.flatMap(qType => 
-                    COGNITIVE_LEVELS.map(cl => {
+                    DISPLAY_COGNITIVE_LEVELS.map(cl => {
                       const count = totals.totalsByQTypeAndCogLevel[qType]?.[cl]?.count || 0;
                       return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: count > 0 ? count.toString() : "", bold: true })], alignment: AlignmentType.CENTER })] });
                     })
@@ -1076,9 +1077,9 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
               new TableRow({
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tỉ lệ % số câu", bold: true })], alignment: AlignmentType.RIGHT })], columnSpan: 5 }),
-                  ...COGNITIVE_LEVELS.map(cl => {
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     const percent = totals.grandTotalCount > 0 ? (totals.totalsByCogLevel[cl].count / totals.grandTotalCount * 100).toFixed(1) : '0.0';
-                    return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${cl}: ${percent}%`, bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 4 });
+                    return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${cl}: ${percent}%`, bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 3 });
                   }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "100%", bold: true })], alignment: AlignmentType.CENTER })] }),
                 ],
@@ -1086,9 +1087,9 @@ const MatrixBuilder: React.FC<MatrixBuilderProps> = ({ initialMatrix, onMatrixUp
               new TableRow({
                 children: [
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "Tỉ lệ % điểm", bold: true })], alignment: AlignmentType.RIGHT })], columnSpan: 5 }),
-                  ...COGNITIVE_LEVELS.map(cl => {
+                  ...DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     const percent = matrix.header.totalPoints > 0 ? (totals.totalsByCogLevel[cl].points / matrix.header.totalPoints * 100).toFixed(1) : '0.0';
-                    return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${cl}: ${percent}%`, bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 4 });
+                    return new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${cl}: ${percent}%`, bold: true })], alignment: AlignmentType.CENTER })], columnSpan: 3 });
                   }),
                   new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: "100%", bold: true })], alignment: AlignmentType.CENTER })] }),
                 ],
@@ -1757,25 +1758,25 @@ const MatrixTableHeader: React.FC = () => (
       <th rowSpan={4} className="border p-2 w-8">STT</th>
       <th rowSpan={4} className="border p-2 min-w-[150px] text-left">Chương/Chủ đề</th>
       <th rowSpan={4} className="border p-2 min-w-[200px] text-left">Nội dung/đơn vị kiến thức</th>
-      <th colSpan={20} className="border p-2 text-sm">Mức độ đánh giá</th>
+      <th colSpan={15} className="border p-2 text-sm">Mức độ đánh giá</th>
       <th rowSpan={4} className="border p-2">Tỉ lệ (%)<br/>điểm</th>
     </tr>
     <tr>
-      <th colSpan={12} className="border p-2">TNKQ</th>
-      <th colSpan={4} rowSpan={2} className="border p-2">Tự luận</th>
-      <th colSpan={4} rowSpan={2} className="border p-2 text-sm">Tổng</th>
+      <th colSpan={9} className="border p-2">TNKQ</th>
+      <th colSpan={3} rowSpan={2} className="border p-2">Tự luận</th>
+      <th colSpan={3} rowSpan={2} className="border p-2 text-sm">Tổng</th>
     </tr>
     <tr>
-      <th colSpan={4} className="border p-1">Nhiều lựa chọn</th>
-      <th colSpan={4} className="border p-1">Đúng - sai</th>
-      <th colSpan={4} className="border p-1">Trả lời ngắn</th>
+      <th colSpan={3} className="border p-1">Nhiều lựa chọn</th>
+      <th colSpan={3} className="border p-1">Đúng - sai</th>
+      <th colSpan={3} className="border p-1">Trả lời ngắn</th>
     </tr>
     <tr className="font-semibold">
       {TNKQ_QUESTION_TYPES.map(qType => 
-        COGNITIVE_LEVELS.map(cl => <th key={`${qType}-${cl}`} className="border p-1">{cl}</th>)
+        DISPLAY_COGNITIVE_LEVELS.map(cl => <th key={`${qType}-${cl}`} className="border p-1">{cl}</th>)
       ).flat()}
-      {COGNITIVE_LEVELS.map(cl => <th key={`essay-${cl}`} className="border p-1">{cl}</th>)}
-      {COGNITIVE_LEVELS.map(cl => <th key={`total-${cl}`} className="border p-1">{cl}</th>)}
+      {DISPLAY_COGNITIVE_LEVELS.map(cl => <th key={`essay-${cl}`} className="border p-1">{cl}</th>)}
+      {DISPLAY_COGNITIVE_LEVELS.map(cl => <th key={`total-${cl}`} className="border p-1">{cl}</th>)}
     </tr>
   </thead>
 );
@@ -1827,7 +1828,7 @@ const MatrixTopicRow: React.FC<{ topic: ContentRow, index: number, updateQuestio
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                 </button>
             </td>
-            {TNKQ_QUESTION_TYPES.map(qType => COGNITIVE_LEVELS.map(cLevel => {
+            {TNKQ_QUESTION_TYPES.map(qType => DISPLAY_COGNITIVE_LEVELS.map(cLevel => {
                 const detail = (topic.questions[qType] as any)?.[cLevel];
                 const count = typeof detail === 'object' ? detail.count : (detail || 0);
                 const points = typeof detail === 'object' ? detail.pointsPerQuestion : (matrix.points[qType]?.[cLevel] || 0);
@@ -1856,7 +1857,7 @@ const MatrixTopicRow: React.FC<{ topic: ContentRow, index: number, updateQuestio
                     </td>
                 );
             })).flat()}
-             {ESSAY_QUESTION_TYPES.map(qType => COGNITIVE_LEVELS.map(cLevel => {
+             {ESSAY_QUESTION_TYPES.map(qType => DISPLAY_COGNITIVE_LEVELS.map(cLevel => {
                 const essayDetails = (topic.questions[qType] as any)?.[cLevel];
                 // "câu vận dụng và nhận biết không cần vẽ" -> Only Comprehension (Hiểu) can have chart
                 const canHaveChart = cLevel === CognitiveLevel.COMPREHENSION;
@@ -1885,7 +1886,7 @@ const MatrixTopicRow: React.FC<{ topic: ContentRow, index: number, updateQuestio
                 );
             })).flat()}
             {/* Row Totals */}
-            {COGNITIVE_LEVELS.map(cLevel => {
+            {DISPLAY_COGNITIVE_LEVELS.map(cLevel => {
                 const tnkq = rowTotals.totalsByCogLevel[cLevel].tnkqCount;
                 const essayParts = rowTotals.totalsByCogLevel[cLevel].essayParts;
                 const parts = [];
@@ -1921,7 +1922,7 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
                 <div className="text-[10px] font-normal text-blue-600">Số câu vẽ biểu đồ: {chartCount}/1</div>
             </td>
             {QUESTION_TYPES.flatMap(qType => 
-                COGNITIVE_LEVELS.map(cLevel => (
+                DISPLAY_COGNITIVE_LEVELS.map(cLevel => (
                     <td key={`count-${qType}-${cLevel}`} className="border p-2">
                         { (ESSAY_QUESTION_TYPES.includes(qType))
                           ? totalsByQTypeAndCogLevel[qType]?.[cLevel]?.count > 0 ? totalsByQTypeAndCogLevel[qType]?.[cLevel]?.count : ''
@@ -1930,7 +1931,7 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
                     </td>
                 ))
             )}
-            {COGNITIVE_LEVELS.map(cLevel => {
+            {DISPLAY_COGNITIVE_LEVELS.map(cLevel => {
                 const tnkq = totalsByCogLevel[cLevel].tnkqCount;
                 const essayParts: EssayQuestion[] = totalsByCogLevel[cLevel].essayParts;
                 const parts = [];
@@ -1949,13 +1950,13 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
         <tr>
             <td colSpan={3} className="border p-2">Tổng số điểm</td>
             {QUESTION_TYPES.flatMap(qType => 
-                COGNITIVE_LEVELS.map(cLevel => (
+                DISPLAY_COGNITIVE_LEVELS.map(cLevel => (
                     <td key={`points-${qType}-${cLevel}`} className="border p-2">
                         {totalsByQTypeAndCogLevel[qType]?.[cLevel]?.points > 0 ? totalsByQTypeAndCogLevel[qType]?.[cLevel]?.points?.toFixed(2).replace(/\.00$|\.([1-9])0$/, '.$1') : ''}
                     </td>
                 ))
             )}
-            {COGNITIVE_LEVELS.map(cLevel => (
+            {DISPLAY_COGNITIVE_LEVELS.map(cLevel => (
                  <td key={`total-points-${cLevel}`} className="border p-2 text-blue-800">{totalsByCogLevel[cLevel].points > 0 ? totalsByCogLevel[cLevel].points.toFixed(2).replace(/\.00$|\.([1-9])0$/, '.$1') : ''}</td>
             ))}
             <td className={`border p-2 text-red-700 ${isTotalCorrect ? 'bg-green-100' : 'bg-yellow-100'}`}>
@@ -1968,7 +1969,7 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
         <tr>
             <td colSpan={3} className="border p-2">Tỉ lệ % (câu)</td>
             {QUESTION_TYPES.flatMap(qType => 
-                COGNITIVE_LEVELS.map(cLevel => {
+                DISPLAY_COGNITIVE_LEVELS.map(cLevel => {
                     const count = totalsByQTypeAndCogLevel[qType]?.[cLevel]?.count || 0;
                     return (
                         <td key={`percent-count-${qType}-${cLevel}`} className="border p-2 text-[10px] text-gray-500">
@@ -1977,7 +1978,7 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
                     );
                 })
             )}
-            {COGNITIVE_LEVELS.map(cLevel => (
+            {DISPLAY_COGNITIVE_LEVELS.map(cLevel => (
                  <td key={`percent-count-${cLevel}`} className="border p-2 text-blue-800">
                   {grandTotalCount > 0 ? (totalsByCogLevel[cLevel].count / grandTotalCount * 100).toFixed(1) : '0.0'}%
                  </td>
@@ -1987,7 +1988,7 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
          <tr>
             <td colSpan={3} className="border p-2">Tỉ lệ % (điểm)</td>
             {QUESTION_TYPES.flatMap(qType => 
-                COGNITIVE_LEVELS.map(cLevel => {
+                DISPLAY_COGNITIVE_LEVELS.map(cLevel => {
                     const points = totalsByQTypeAndCogLevel[qType]?.[cLevel]?.points || 0;
                     return (
                         <td key={`percent-points-${qType}-${cLevel}`} className="border p-2 text-[10px] text-gray-500">
@@ -1996,7 +1997,7 @@ const MatrixTableFooter: React.FC<{ totals: any, targetTotalPoints: number }> = 
                     );
                 })
             )}
-            {COGNITIVE_LEVELS.map(cLevel => (
+            {DISPLAY_COGNITIVE_LEVELS.map(cLevel => (
                  <td key={`percent-points-${cLevel}`} className="border p-2 text-blue-800">
                   {targetTotalPoints > 0 ? (totalsByCogLevel[cLevel].points / targetTotalPoints * 100).toFixed(1) : '0.0'}%
                  </td>
@@ -2020,15 +2021,43 @@ interface SpecificationTableProps {
 const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals, onClose, updateLearningOutcome, showPointsInCells }) => {
   const [generatingYCCD, setGeneratingYCCD] = useState<string | null>(null);
 
-  const handleGenerateYCCD = async (topicId: string, contentName: string, cLevel: CognitiveLevelType) => {
+  const handleGenerateYCCD = async (topicId: string, contentName: string, cLevel: CognitiveLevelType, existingOutcome?: string) => {
     const key = `${topicId}-${cLevel}`;
     setGeneratingYCCD(key);
     try {
+        // Bước 0: Nếu đã có YCCĐ từ chương trình đã nạp, dùng ngay (không gọi AI)
+        if (existingOutcome && existingOutcome.trim()) {
+            console.info(`[YCCĐ] Dùng YCCĐ đã lưu từ chương trình nạp cho "${contentName}" - ${cLevel}`);
+            updateLearningOutcome(topicId, cLevel, existingOutcome.trim());
+            return;
+        }
+
+        // Bước 1: Tra cứu trong chương trình đã nạp sẵn từ constants
+        let curriculumOutcome: string | undefined = undefined;
+        const subjectTopics = ALL_SAMPLE_TOPICS[matrix.header.subject as keyof typeof ALL_SAMPLE_TOPICS];
+        if (subjectTopics) {
+          const gradeTopics = (subjectTopics as any)[matrix.header.grade];
+          if (gradeTopics) {
+            // Duyệt qua tất cả chương để tìm bài khớp contentName
+            for (const chapterContents of Object.values(gradeTopics)) {
+              const found = (chapterContents as any[]).find(
+                (item: any) => item.contentName === contentName
+              );
+              if (found?.learningOutcomes?.[cLevel]) {
+                curriculumOutcome = found.learningOutcomes[cLevel];
+                break;
+              }
+            }
+          }
+        }
+
+        // Bước 2: Gọi service (trả về ngay nếu có curriculum, gọi AI nếu không)
         const outcome = await generateLearningOutcome(
             matrix.header.subject,
             matrix.header.grade,
             contentName,
-            cLevel
+            cLevel,
+            curriculumOutcome
         );
         updateLearningOutcome(topicId, cLevel, outcome);
     } catch (error) {
@@ -2139,30 +2168,30 @@ const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals,
               <th rowSpan={3} className="border p-1 min-w-[200px]">Nội dung/đơn vị kiến thức</th>
               <th rowSpan={3} className="border p-1 min-w-[150px]">Mức độ nhận thức</th>
               <th rowSpan={3} className="border p-1 min-w-[250px]">Yêu cầu cần đạt</th>
-              <th colSpan={17} className="border p-2 text-sm">Số câu/lệnh hỏi ở các mức độ đánh giá</th>
+              <th colSpan={13} className="border p-2 text-sm">Số câu/lệnh hỏi ở các mức độ đánh giá</th>
             </tr>
             <tr>
-              <th colSpan={12} className="border p-1">TNKQ</th>
-              <th colSpan={4} className="border p-1">Tự luận</th>
+              <th colSpan={9} className="border p-1">TNKQ</th>
+              <th colSpan={3} className="border p-1">Tự luận</th>
               <th rowSpan={2} className="border p-1">Tổng</th>
             </tr>
             <tr>
               {/* TNKQ Headers */}
               {TNKQ_QUESTION_TYPES.map(qType => (
                 <React.Fragment key={qType}>
-                  {COGNITIVE_LEVELS.map(cl => <th key={`${qType}-${cl}`} className="border p-1 font-semibold">{cl[0]}</th>)}
+                  {DISPLAY_COGNITIVE_LEVELS.map(cl => <th key={`${qType}-${cl}`} className="border p-1 font-semibold">{cl[0]}</th>)}
                 </React.Fragment>
               ))}
               {/* Essay Headers */}
-              {COGNITIVE_LEVELS.map(cl => <th key={`essay-cl-${cl}`} className="border p-1 font-semibold">{cl[0]}</th>)}
+              {DISPLAY_COGNITIVE_LEVELS.map(cl => <th key={`essay-cl-${cl}`} className="border p-1 font-semibold">{cl[0]}</th>)}
             </tr>
             <tr>
                 <td colSpan={5} className="border p-1 bg-gray-100"></td>
                 {/* Type names under cognitive levels */}
                 {TNKQ_QUESTION_TYPES.map(qType => (
-                     <td colSpan={COGNITIVE_LEVELS.length} key={qType} className="border p-1 text-center font-semibold">{qType}</td>
+                     <td colSpan={DISPLAY_COGNITIVE_LEVELS.length} key={qType} className="border p-1 text-center font-semibold">{qType}</td>
                 ))}
-                 <td colSpan={COGNITIVE_LEVELS.length} className="border p-1 text-center font-semibold">{QuestionType.ESSAY}</td>
+                 <td colSpan={DISPLAY_COGNITIVE_LEVELS.length} className="border p-1 text-center font-semibold">{QuestionType.ESSAY}</td>
                  <td className="border p-1 bg-gray-100"></td>
             </tr>
           </thead>
@@ -2185,7 +2214,7 @@ const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals,
                           placeholder={`* ${row.cognitiveLevel}\n(Nhập YCCĐ hoặc bấm ✨ để tạo tự động)`}
                         />
                         <button 
-                          onClick={() => handleGenerateYCCD(row.topicId, row.contentName, row.cognitiveLevel!)}
+                          onClick={() => handleGenerateYCCD(row.topicId, row.contentName, row.cognitiveLevel!, row.learningOutcomes?.[row.cognitiveLevel!])}
                           disabled={generatingYCCD === `${row.topicId}-${row.cognitiveLevel}`}
                           className="p-1 text-blue-600 rounded-full hover:bg-blue-100 transition disabled:opacity-50 disabled:cursor-wait flex-shrink-0"
                           title="Tạo Yêu cầu cần đạt bằng AI"
@@ -2213,7 +2242,7 @@ const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals,
                 
                 {/* --- Question Grid --- */}
                 {QUESTION_TYPES.map(qType => (
-                  COGNITIVE_LEVELS.map(cl => {
+                  DISPLAY_COGNITIVE_LEVELS.map(cl => {
                     let displayValue = '';
                     if (row.cognitiveLevel === cl) {
                         const detail = (row.questions[qType] as any)?.[cl];
@@ -2274,7 +2303,7 @@ const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals,
             <tr>
               <td colSpan={4} className="border p-2 text-right">Tổng cộng</td>
               {QUESTION_TYPES.flatMap(qType => 
-                COGNITIVE_LEVELS.map(cl => (
+                DISPLAY_COGNITIVE_LEVELS.map(cl => (
                   <td key={`spec-total-${qType}-${cl}`} className="border p-2">
                     {totals.totalsByQTypeAndCogLevel[qType]?.[cl]?.count || ''}
                   </td>
@@ -2284,8 +2313,8 @@ const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals,
             </tr>
             <tr>
               <td colSpan={4} className="border p-2 text-right">Tỉ lệ % số câu</td>
-              {COGNITIVE_LEVELS.map(cl => (
-                <td key={`spec-percent-count-${cl}`} colSpan={4} className="border p-2 text-blue-700">
+              {DISPLAY_COGNITIVE_LEVELS.map(cl => (
+                <td key={`spec-percent-count-${cl}`} colSpan={3} className="border p-2 text-blue-700">
                   {cl}: {totals.grandTotalCount > 0 ? (totals.totalsByCogLevel[cl].count / totals.grandTotalCount * 100).toFixed(1) : '0.0'}%
                 </td>
               ))}
@@ -2293,8 +2322,8 @@ const SpecificationTable: React.FC<SpecificationTableProps> = ({ matrix, totals,
             </tr>
             <tr>
               <td colSpan={4} className="border p-2 text-right">Tỉ lệ % điểm</td>
-              {COGNITIVE_LEVELS.map(cl => (
-                <td key={`spec-percent-points-${cl}`} colSpan={4} className="border p-2 text-blue-700">
+              {DISPLAY_COGNITIVE_LEVELS.map(cl => (
+                <td key={`spec-percent-points-${cl}`} colSpan={3} className="border p-2 text-blue-700">
                   {cl}: {matrix.header.totalPoints > 0 ? (totals.totalsByCogLevel[cl].points / matrix.header.totalPoints * 100).toFixed(1) : '0.0'}%
                 </td>
               ))}
