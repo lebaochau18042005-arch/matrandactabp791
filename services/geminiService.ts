@@ -27,8 +27,8 @@ function getAiClient(): GoogleGenAI {
 }
 
 
-// Model fallback list per AI_INSTRUCTIONS
-const FALLBACK_MODELS = ['gemini-3-flash-preview', 'gemini-3-pro-preview', 'gemini-2.5-flash'];
+// Model fallback list — dùng các model hợp lệ theo thứ tự ưu tiên
+const FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
 
 async function generateContentWithFallback(requestOptions: any, fallbackModels: string[] = FALLBACK_MODELS): Promise<any> {
     // Collect all models. Remove duplicates.
@@ -61,7 +61,7 @@ export async function suggestTopicsFromDescription(
   grade: number,
   description: string
 ): Promise<{ chapterName: string; contentName: string }[]> {
-  const modelName = 'gemini-3-flash-preview';
+  const modelName = 'gemini-2.0-flash';
   const prompt = `
     Bạn là một chuyên gia giáo dục. Dựa trên mô tả dưới đây về nội dung ôn tập cho môn ${subject} lớp ${grade}, hãy đề xuất danh sách các chương và nội dung kiến thức tương ứng để lập ma trận đề thi.
     
@@ -104,7 +104,7 @@ export async function suggestMatrixFromContent(
   grade: number,
   content: string
 ): Promise<{ chapterName: string; contentName: string; learningOutcomes: Record<string, string> }[]> {
-  const modelName = 'gemini-3-flash-preview';
+  const modelName = 'gemini-2.0-flash';
   const prompt = `
     Bạn là một chuyên gia giáo dục. Hãy phân tích tài liệu dưới đây (môn ${subject} lớp ${grade}) và trích xuất các chủ đề kiến thức quan trọng cùng với "Yêu cầu cần đạt" (Bản đặc tả) tương ứng cho 3 mức độ: Biết, Hiểu, Vận dụng.
     
@@ -265,7 +265,7 @@ export async function generateLearningOutcome(
     console.info(`[AI] YCCĐ tìm thấy trong chương trình cho "${contentName}" - ${cognitiveLevel}, không cần gọi AI.`);
     return curriculumOutcome.trim();
   }
-  const modelName = 'gemini-3-flash-preview';
+  const modelName = 'gemini-2.0-flash';
   
   let subjectSpecificInstructions = '';
   const subjectLower = subject.toLowerCase();
@@ -324,7 +324,7 @@ export async function generateLearningOutcome(
 }
 
 export async function parseMatrixFromText(text: string): Promise<ExamMatrix | null> {
-  const modelName = 'gemini-3-flash-preview';
+  const modelName = 'gemini-2.0-flash';
   const prompt = `
     Bạn là một chuyên gia giáo dục. Hãy phân tích đoạn văn bản dưới đây (được trích xuất từ file Ma trận đề thi) và chuyển đổi nó thành một đối tượng JSON khớp với cấu trúc ExamMatrix.
     
@@ -366,7 +366,7 @@ export async function parseMatrixFromText(text: string): Promise<ExamMatrix | nu
 }
 
 export async function generateExam(matrix: ExamMatrix, documentContent?: string, customMatrixText?: string): Promise<string> {
-  const modelName = 'gemini-2.5-flash';
+  const modelName = 'gemini-2.0-flash';
   
   const formattedMatrix = customMatrixText ? `\nMA TRẬN VÀ BẢN ĐẶC TẢ TỪ FILE TẢI LÊN:\n${customMatrixText}\n\n(Lưu ý: Bám sát nội dung ma trận/đặc tả từ file này thay vì các thông số chuẩn)\n` : formatMatrixForPrompt(matrix);
   
