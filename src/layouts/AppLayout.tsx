@@ -125,14 +125,19 @@ function xpForLevel(level: number): number {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function AppLayout({ children, title = 'GeoHub' }: AppLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, loginAsDemo } = useAuth();
   const { xp, level } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  const role: UserRole = user?.role ?? 'guest';
+  // Auto-login as teacher demo if not logged in
+  useEffect(() => {
+    if (!user) loginAsDemo('teacher');
+  }, [user, loginAsDemo]);
+
+  const role: UserRole = user?.role ?? 'teacher';
   const navGroups = getNavGroups(role);
 
   // Close sidebar on route change (mobile)
@@ -147,7 +152,8 @@ export default function AppLayout({ children, title = 'GeoHub' }: AppLayoutProps
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    loginAsDemo('teacher'); // re-login as demo instead of going to login page
+    navigate('/teacher');
   };
 
   // ─── Sidebar inner content ─────────────────────────────────────────────────

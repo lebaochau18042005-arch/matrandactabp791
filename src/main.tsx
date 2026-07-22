@@ -84,11 +84,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               {/* Original GeoHub workspace at /workspace */}
               <Route path="/workspace"     element={<App />} />
 
-              {/* Root: redirect to new LMS login */}
-              <Route path="/"              element={<Navigate to="/login" replace />} />
+              {/* Root: go straight to teacher dashboard */}
+              <Route path="/"              element={<Navigate to="/teacher" replace />} />
 
               {/* Fallback */}
-              <Route path="*"             element={<Navigate to="/login" replace />} />
+              <Route path="*"             element={<Navigate to="/teacher" replace />} />
             </Routes>
             <Toaster position="top-right" richColors />
           </Suspense>
