@@ -5,16 +5,25 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-export const supabase = isSupabaseConfigured 
+// If Supabase is not configured (e.g. on Vercel without env vars),
+// provide a safe no-op mock so the app doesn't crash.
+export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : ({
       auth: {
-        signUp: async () => ({ error: { message: 'Supabase chưa được cấu hình trên Vercel. Vui lòng bấm vào nút "👀 Trải nghiệm bằng quyền Khách" ở bên dưới.' } }),
-        signInWithPassword: async () => ({ error: { message: 'Supabase chưa được cấu hình trên Vercel. Vui lòng bấm vào nút "👀 Trải nghiệm bằng quyền Khách" ở bên dưới.' } }),
-        signInWithOAuth: async () => ({ error: { message: 'Supabase chưa được cấu hình.' } }),
+        signUp: async () => ({ data: null, error: { message: 'Supabase chưa được cấu hình. Vui lòng dùng tài khoản Demo.' } }),
+        signInWithPassword: async () => ({ data: null, error: { message: 'Supabase chưa được cấu hình. Vui lòng dùng tài khoản Demo.' } }),
+        signInWithOAuth: async () => ({ data: null, error: { message: 'Supabase chưa được cấu hình.' } }),
         signOut: async () => ({ error: null }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        onAuthStateChange: (_event: any, _callback: any) => ({
+          data: { subscription: { unsubscribe: () => {} } },
+        }),
         getSession: async () => ({ data: { session: null }, error: null }),
-      }
+      },
+      from: (_table: string) => ({
+        select: () => ({ eq: () => ({ single: async () => ({ data: null, error: new Error('No Supabase') }) }) }),
+        insert: async () => ({ data: null, error: new Error('No Supabase') }),
+        update: () => ({ eq: async () => ({ data: null, error: new Error('No Supabase') }) }),
+        upsert: async () => ({ data: null, error: new Error('No Supabase') }),
+      }),
     } as any);
-

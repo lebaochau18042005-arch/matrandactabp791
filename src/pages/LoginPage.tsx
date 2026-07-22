@@ -57,9 +57,10 @@ export default function LoginPage() {
     
     const cleanEmail = email.trim();
     
-    // DEMO BYPASS
+    // DEMO BYPASS – không cần Supabase
     if (cleanEmail === 'giaovien@geohub.vn' || cleanEmail === 'hocsinh@geohub.vn') {
       loginAsDemo(cleanEmail === 'giaovien@geohub.vn' ? 'teacher' : 'student');
+      setLoading(false);
       navigate('/dashboard', { replace: true });
       return;
     }
@@ -84,7 +85,6 @@ export default function LoginPage() {
           password,
         });
         if (signInError) throw signInError;
-        // User state will automatically update via onAuthStateChange in AuthContext
       }
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
@@ -92,6 +92,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
 
   const handleGoogleLogin = async () => {
     try {

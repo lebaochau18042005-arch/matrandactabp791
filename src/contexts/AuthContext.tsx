@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuthStore, User } from '../store/authStore';
 
 interface AuthContextType {
@@ -47,27 +47,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Only hook into Supabase auth if it's properly configured
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      return;
+    }
+
+    // Check active sessions
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session) {
         fetchProfile(session);
       } else {
         setLoading(false);
       }
-    });
+    }).catch(() => setLoading(false));
 
-    // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        fetchProfile(session);
-      } else {
-        setUser(null, null);
-        setLoading(false);
-      }
-    });
+    // Listen for auth state changes
+    let subscription: any;
+    try {
+      const { data } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+        if (session) {
+          fetchProfile(session);
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      });
+      subscription = data?.subscription;
+    } catch (e) {
+      setLoading(false);
+    }
 
-    return () => subscription.unsubscribe();
-  }, [setUser]);
+    return () => {
+      if (subscription?.unsubscribe) subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchProfile = async (session: any) => {
     try {
@@ -88,32 +102,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatar: data.avatar_url || 'KH',
           xp: data.xp || 0,
           level: Math.floor((data.xp || 0) / 1000) + 1,
-        }, session);
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      // Fallback
+      // Fallback – set basic user from session
       setUser({
         id: session.user.id,
         email: session.user.email,
         name: session.user.user_metadata?.full_name || 'Người dùng',
         role: session.user.user_metadata?.role || 'student',
-      }, session);
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const loginAsGuest = () => {
-    setUser(GUEST_USER, 'dummy-guest-token');
+    setUser(GUEST_USER);
   };
 
   const loginAsDemo = (role: 'teacher' | 'student') => {
-    setUser(role === 'teacher' ? DEMO_TEACHER : DEMO_STUDENT, 'dummy-demo-token');
+    setUser(role === 'teacher' ? DEMO_TEACHER : DEMO_STUDENT);
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      if (isSupabaseConfigured) await supabase.auth.signOut();
+    } catch (_) {}
     storeLogout();
   };
 
