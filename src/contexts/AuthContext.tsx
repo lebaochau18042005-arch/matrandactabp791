@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   loginAsGuest: () => void;
+  loginAsDemo: (role: 'teacher' | 'student') => void;
   logout: () => void;
 }
 
@@ -19,6 +20,26 @@ const GUEST_USER: User = {
   avatar: 'KH',
   xp: 0,
   level: 0,
+};
+
+const DEMO_TEACHER: User = {
+  id: 'demo-teacher',
+  name: 'Giáo viên Demo',
+  email: 'giaovien@geohub.vn',
+  role: 'teacher',
+  avatar: 'GV',
+  xp: 1500,
+  level: 5,
+};
+
+const DEMO_STUDENT: User = {
+  id: 'demo-student',
+  name: 'Học sinh Demo',
+  email: 'hocsinh@geohub.vn',
+  role: 'student',
+  avatar: 'HS',
+  xp: 450,
+  level: 2,
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -84,15 +105,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginAsGuest = () => {
-    setUser(GUEST_USER, null);
+    setUser(GUEST_USER, 'dummy-guest-token');
+  };
+
+  const loginAsDemo = (role: 'teacher' | 'student') => {
+    setUser(role === 'teacher' ? DEMO_TEACHER : DEMO_STUDENT, 'dummy-demo-token');
   };
 
   const logout = async () => {
-    await storeLogout();
+    await supabase.auth.signOut();
+    storeLogout();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginAsGuest, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginAsGuest, loginAsDemo, logout }}>
       {children}
     </AuthContext.Provider>
   );

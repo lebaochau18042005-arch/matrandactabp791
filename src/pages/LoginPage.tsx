@@ -17,7 +17,7 @@ const ORBS = [
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function LoginPage() {
-  const { user, loginAsGuest } = useAuth();
+  const { user, loginAsGuest, loginAsDemo } = useAuth();
   const navigate = useNavigate();
 
   const [isSignUp, setIsSignUp] = useState(false);
@@ -57,6 +57,13 @@ export default function LoginPage() {
     
     const cleanEmail = email.trim();
     
+    // DEMO BYPASS
+    if (cleanEmail === 'giaovien@geohub.vn' || cleanEmail === 'hocsinh@geohub.vn') {
+      loginAsDemo(cleanEmail === 'giaovien@geohub.vn' ? 'teacher' : 'student');
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+
     try {
       if (isSignUp) {
         const { error: signUpError } = await supabase.auth.signUp({
