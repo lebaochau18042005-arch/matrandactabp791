@@ -812,9 +812,9 @@ const ApiSettingsModal = ({
   };
 
   const modelsList = [
-    { id: 'gemini-3.0-pro', label: 'gemini-3.0-pro (Mặc định)', desc: 'Mô hình mới nhất, cực kỳ thông minh — khuyến nghị cho mọi tác vụ.' },
+    { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (Mặc định)', desc: 'Mô hình tốc độ cao, phản hồi nhanh — khuyến nghị cho mọi tác vụ.' },
     { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro', desc: 'Mô hình mạnh mẽ, chuyên xử lý logic phức tạp.' },
-    { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash', desc: 'Mô hình tốc độ cao, phản hồi nhanh.' },
+    { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash', desc: 'Mô hình cân bằng.' },
   ];
 
   return (
@@ -2029,7 +2029,7 @@ const MatrixModule = () => {
         }
 
         setIsExamLoading(true);
-        const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-3-flash-preview';
+        const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-2.5-flash';
 
         const parsePrompt = `Bạn là trợ lý AI chuyên gia giáo dục môn Địa lí Việt Nam.
 Hãy phân tích nội dung văn bản đề thi thô sau đây:
@@ -2151,7 +2151,7 @@ Chú ý cực kỳ quan trọng:
 
     setIsAiLoading(true);
     try {
-      const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-3-flash-preview';
+      const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-2.5-flash';
       
       const prompt = `Bạn là trợ lý AI chuyên gia giáo dục phổ thông Việt Nam môn Địa lí.
 Hãy phân tích yêu cầu hoặc dữ liệu ma trận thô sau:
@@ -2228,7 +2228,7 @@ Chú ý quan trọng:
 
     setIsExamLoading(true);
     try {
-      const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-3-flash-preview';
+      const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-2.5-flash';
       
       const examPrompt = `Bạn là trợ lý AI chuyên gia giáo dục phổ thông Việt Nam môn Địa lí.
 Dưới đây là bảng Ma trận & Đặc tả hiện tại của đề thi:
@@ -7702,7 +7702,7 @@ export default function App() {
   const [editingApp, setEditingApp] = useState<AppData | null>(null);
 
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
-  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_preferred_model') || 'gemini-3.0-pro');
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_preferred_model') || 'gemini-2.5-flash');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Auto-open settings if API Key is missing

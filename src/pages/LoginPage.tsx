@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-3.0-pro');
+  const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-2.5-flash');
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -434,14 +434,13 @@ export default function LoginPage() {
                 <div>
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.45)', fontSize: '11px', marginBottom: '4px' }}>MODEL</label>
                   <select
-                    className="geohub-input"
                     value={selectedModel}
-                    onChange={handleModelChange}
-                    style={{ padding: '10px', fontSize: '13px', appearance: 'none', background: 'rgba(255,255,255,0.05) url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 12px center', backgroundSize: '10px' }}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white focus:border-teal-500 focus:outline-none transition-colors"
                   >
-                    <option value="gemini-3.0-pro">Gemini 3.0 Pro (Mặc định)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Mặc định)</option>
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                   </select>
                 </div>
               </div>

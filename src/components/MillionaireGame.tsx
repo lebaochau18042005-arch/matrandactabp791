@@ -62,7 +62,7 @@ export const MillionaireGame = ({
       if (!keyToUse) {
         throw new Error("Chưa cấu hình API Key. Vui lòng thiết lập API Key trong phần Cấu hình.");
       }
-      const modelToUse = selectedModel || 'gemini-3-flash-preview';
+      const modelToUse = selectedModel || 'gemini-2.5-flash';
 
       const response = await generateContentWithFallback(
         keyToUse,
@@ -183,7 +183,7 @@ export const MillionaireGame = ({
       if (!keyToUse) {
         throw new Error("Chưa cấu hình API Key. Vui lòng thiết lập API Key trong phần Cấu hình.");
       }
-      const modelToUse = selectedModel || 'gemini-3-flash-preview';
+      const modelToUse = selectedModel || 'gemini-2.5-flash';
 
       const response = await generateContentWithFallback(
         keyToUse,
