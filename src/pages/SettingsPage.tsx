@@ -49,7 +49,7 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') ?? '');
   const [showKey, setShowKey] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_model') || 'gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_model') || 'gemini-1.5-flash');
 
   // Appearance
   const [animQuality, setAnimQuality] = useState<'high' | 'medium' | 'low'>('high');
@@ -226,10 +226,8 @@ export default function SettingsPage() {
               onChange={e => setSelectedModel(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 focus:outline-none transition-colors"
             >
-              <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash (Khuyến nghị - Nhanh & Miễn phí)</option>
-              <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (Mạnh nhất)</option>
-              <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
-              <option value="gemini-2.0-flash-lite">🔋 Gemini 2.0 Flash Lite (Tiết kiệm Quota)</option>
+              <option value="gemini-1.5-flash">⚡ Gemini 1.5 Flash (Khuyến nghị - Nhanh & Miễn phí)</option>
+              <option value="gemini-1.5-pro">🧠 Gemini 1.5 Pro (Mạnh nhất)</option>
             </select>
             <p className="text-xs text-slate-500 mt-1">Model sẽ được dùng để tạo câu hỏi và nội dung AI.</p>
           </div>

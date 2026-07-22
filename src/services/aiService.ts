@@ -41,7 +41,7 @@ export const aiService = {
   generateAIContent: async (input: GeoAIInput): Promise<GeoAIOutput> => {
     try {
       const apiKey = localStorage.getItem('gemini_api_key');
-      const selectedModel = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+      const selectedModel = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
       if (apiKey) {
         let jsonFormatInstruction = `
 Trả về đúng định dạng JSON sau (không thêm bất kỳ văn bản nào bên ngoài JSON):

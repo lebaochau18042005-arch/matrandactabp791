@@ -29,7 +29,7 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-1.5-flash');
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -438,9 +438,8 @@ export default function LoginPage() {
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white focus:border-teal-500 focus:outline-none transition-colors"
                   >
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Mặc định)</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Mặc định)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                   </select>
                 </div>
               </div>

@@ -812,9 +812,8 @@ const ApiSettingsModal = ({
   };
 
   const modelsList = [
-    { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (Mặc định)', desc: 'Mô hình tốc độ cao, phản hồi nhanh — khuyến nghị cho mọi tác vụ.' },
-    { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro', desc: 'Mô hình mạnh mẽ, chuyên xử lý logic phức tạp.' },
-    { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash', desc: 'Mô hình cân bằng.' },
+    { id: 'gemini-1.5-flash', label: 'gemini-1.5-flash (Mặc định)', desc: 'Mô hình tốc độ cao, phản hồi nhanh — khuyến nghị cho mọi tác vụ.' },
+    { id: 'gemini-1.5-pro', label: 'gemini-1.5-pro', desc: 'Mô hình mạnh mẽ, chuyên xử lý logic phức tạp.' },
   ];
 
   return (
@@ -2029,7 +2028,7 @@ const MatrixModule = () => {
         }
 
         setIsExamLoading(true);
-        const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-2.5-flash';
+        const preferredModel = localStorage.getItem('gemini_preferred_model') || 'gemini-1.5-flash';
 
         const parsePrompt = `Bạn là trợ lý AI chuyên gia giáo dục môn Địa lí Việt Nam.
 Hãy phân tích nội dung văn bản đề thi thô sau đây:
@@ -7702,7 +7701,7 @@ export default function App() {
   const [editingApp, setEditingApp] = useState<AppData | null>(null);
 
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
-  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_preferred_model') || 'gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_preferred_model') || 'gemini-1.5-flash');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Auto-open settings if API Key is missing
