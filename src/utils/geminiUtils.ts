@@ -1,8 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 
 export const FALLBACK_MODELS = [
-  'gemini-1.5-flash',
-  'gemini-1.5-pro'
+  'gemini-3.5-flash',
+  'gemini-3.1-pro'
 ];
 
 export const parseApiError = (error: any): string => {

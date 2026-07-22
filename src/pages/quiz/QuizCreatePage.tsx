@@ -55,7 +55,7 @@ export default function QuizCreatePage() {
       
       let q: GeneratedQuiz;
       const savedApiKey = localStorage.getItem('gemini_api_key') || '';
-      const savedModel = localStorage.getItem('gemini_model') || 'gemini-1.5-flash';
+      const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash';
       
       if (savedApiKey.trim()) {
         toast.info(`Đang kết nối tới ${savedModel}, vui lòng chờ...`, { duration: 3000 });
