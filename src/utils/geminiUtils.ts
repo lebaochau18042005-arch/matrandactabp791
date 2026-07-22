@@ -1,9 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
 
 export const FALLBACK_MODELS = [
-  'gemini-3.0-pro',
+  'gemini-2.5-flash',
   'gemini-2.5-pro',
-  'gemini-2.5-flash'
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
 ];
 
 export const parseApiError = (error: any): string => {
@@ -43,7 +44,12 @@ export const generateContentWithFallback = async (
   preferredModel: string,
   params: { contents: any; config?: any }
 ) => {
-  const ai = new GoogleGenAI({ apiKey });
+  // Fallback to environment variable if no key provided
+  const resolvedKey = apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
+  if (!resolvedKey) {
+    throw new Error('Chưa có API Key. Vui lòng nhập Gemini API Key ở trang Cài đặt.');
+  }
+  const ai = new GoogleGenAI({ apiKey: resolvedKey });
   let lastError: any = null;
 
   for (const model of getOrderedModels(preferredModel)) {
@@ -60,7 +66,7 @@ export const generateContentWithFallback = async (
       const errorType = parseApiError(error);
       
       if (errorType === 'INVALID_API_KEY') {
-        throw new Error("API Key không hợp lệ, không có quyền truy cập, hoặc mô hình bị khóa. Vui lòng kiểm tra lại cấu hình AI ở trang Đăng nhập.");
+        throw new Error("API Key không hợp lệ hoặc mô hình bị khóa. Vui lòng vào ⚙️ Cài đặt để kiểm tra lại API Key.");
       } else if (errorType === 'QUOTA_EXCEEDED') {
         throw new Error("API Key đã hết hạn mức sử dụng (Quota Exceeded). Vui lòng dùng API Key khác.");
       } else if (errorType === 'MODEL_OVERLOADED') {

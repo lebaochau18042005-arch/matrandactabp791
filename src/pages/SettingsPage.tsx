@@ -49,6 +49,7 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') ?? '');
   const [showKey, setShowKey] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_model') || 'gemini-2.5-flash');
 
   // Appearance
   const [animQuality, setAnimQuality] = useState<'high' | 'medium' | 'low'>('high');
@@ -60,6 +61,7 @@ export default function SettingsPage() {
 
   const handleSaveApiKey = () => {
     localStorage.setItem('gemini_api_key', apiKey);
+    localStorage.setItem('gemini_model', selectedModel);
     setKeySaved(true);
     setTimeout(() => setKeySaved(false), 2000);
   };
@@ -212,6 +214,24 @@ export default function SettingsPage() {
             >
               🔗 Lấy API Key miễn phí tại Google AI Studio →
             </a>
+          </div>
+
+          {/* Model selection */}
+          <div>
+            <label className="text-xs font-semibold text-slate-400 block mb-1">
+              Model AI
+            </label>
+            <select
+              value={selectedModel}
+              onChange={e => setSelectedModel(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 focus:outline-none transition-colors"
+            >
+              <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash (Khuyến nghị - Nhanh & Miễn phí)</option>
+              <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (Mạnh nhất)</option>
+              <option value="gemini-2.0-flash">🚀 Gemini 2.0 Flash</option>
+              <option value="gemini-2.0-flash-lite">🔋 Gemini 2.0 Flash Lite (Tiết kiệm Quota)</option>
+            </select>
+            <p className="text-xs text-slate-500 mt-1">Model sẽ được dùng để tạo câu hỏi và nội dung AI.</p>
           </div>
         </Section>
 
