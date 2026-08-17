@@ -1,22 +1,80 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Save, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Save, X } from 'lucide-react';
+import type { ValidationIssue } from '../../utils/examValidation';
+import { withNormalizedTableData } from '../../utils/stimulusTable';
 
 interface QuizQuestionEditorProps {
   question: any;
+  validationIssues?: ValidationIssue[];
   onSave: (updatedQuestion: any) => void;
   onCancel: () => void;
 }
 
-export default function QuizQuestionEditor({ question, onSave, onCancel }: QuizQuestionEditorProps) {
+export default function QuizQuestionEditor({ question, validationIssues = [], onSave, onCancel }: QuizQuestionEditorProps) {
   const [q, setQ] = useState(JSON.parse(JSON.stringify(question))); // Deep copy
+  const [inputDataText, setInputDataText] = useState(() => (
+    Object.entries(question.shortAnswer?.inputData || {})
+      .map(([key, value]) => `${key} = ${String(value)}`)
+      .join('\n')
+  ));
+
+  const parseInputData = (value: string) => value
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .reduce<Record<string, string | number>>((result, line) => {
+      const separatorIndex = line.search(/[:=]/);
+      if (separatorIndex < 1) return result;
+
+      const key = line.slice(0, separatorIndex).trim();
+      const rawValue = line.slice(separatorIndex + 1).trim();
+      if (!key || !rawValue) return result;
+
+      const normalizedNumber = rawValue.replace(/\s/g, '').replace(',', '.');
+      const numericValue = Number(normalizedNumber);
+      result[key] = Number.isFinite(numericValue) ? numericValue : rawValue;
+      return result;
+    }, {});
+
+  const saveQuestion = () => {
+    if (q.type !== 'short_answer') {
+      onSave(q);
+      return;
+    }
+
+    onSave({
+      ...q,
+      shortAnswer: {
+        ...q.shortAnswer,
+        inputData: parseInputData(inputDataText),
+      },
+    });
+  };
+
+  const handleBaseChange = (field: string, value: any) => {
+    setQ((prev: any) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const handleStimulusChange = (field: string, value: string) => {
     setQ((prev: any) => ({
       ...prev,
-      stimulus: {
-        ...(prev.stimulus || { type: 'text', content: '' }),
-        [field]: value,
-      }
+      stimulus: (() => {
+        const nextStimulus = {
+          ...(prev.stimulus || { type: 'text', content: '' }),
+          [field]: value,
+        };
+
+        if (field === 'content' || field === 'type') {
+          const stimulusWithoutTableData = { ...nextStimulus };
+          delete stimulusWithoutTableData.tableData;
+          return withNormalizedTableData(stimulusWithoutTableData);
+        }
+
+        return nextStimulus;
+      })()
     }));
   };
 
@@ -52,21 +110,186 @@ export default function QuizQuestionEditor({ question, onSave, onCancel }: QuizQ
           <button onClick={onCancel} className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-sm text-white flex items-center gap-1">
             <X size={14} /> Hủy
           </button>
-          <button onClick={() => onSave(q)} className="px-3 py-1.5 rounded bg-teal-500 hover:bg-teal-400 text-sm text-white flex items-center gap-1 font-medium">
+          <button onClick={saveQuestion} className="px-3 py-1.5 rounded bg-teal-500 hover:bg-teal-400 text-sm text-white flex items-center gap-1 font-medium">
             <Save size={14} /> Lưu lại
           </button>
         </div>
       </div>
 
+      {validationIssues.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-bold text-amber-200">
+            <AlertTriangle size={16} /> Lỗi cần sửa trong câu này
+          </div>
+          <div className="space-y-2">
+            {validationIssues.map(issue => (
+              <div key={issue.id} className="rounded-md bg-slate-950/60 px-3 py-2 text-xs text-slate-200">
+                <span className={issue.severity === 'blocking' ? 'font-bold text-red-300' : 'font-bold text-amber-300'}>
+                  {issue.severity === 'blocking' ? 'Bắt buộc' : 'Cảnh báo'}:
+                </span>{' '}
+                {issue.message}
+                <div className="mt-1 text-slate-400">Gợi ý: {issue.suggestion}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-lg border border-white/10 bg-slate-900/70 p-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 font-medium">Mức độ nhận thức</label>
+            <select
+              className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+              value={q.level || 'Nhận biết'}
+              onChange={(e) => handleBaseChange('level', e.target.value)}
+            >
+              <option>Nhận biết</option>
+              <option>Thông hiểu</option>
+              <option>Vận dụng</option>
+              <option>Vận dụng cao</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1 font-medium">Năng lực đặc thù</label>
+            <select
+              className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+              value={q.competency || ''}
+              onChange={(e) => handleBaseChange('competency', e.target.value)}
+            >
+              <option value="">Chọn năng lực</option>
+              <option>Nhận thức khoa học địa lí</option>
+              <option>Tìm hiểu địa lí</option>
+              <option>Vận dụng kiến thức, kĩ năng đã học</option>
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs text-slate-400 mb-1 font-medium">Yêu cầu cần đạt</label>
+            <textarea
+              className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500 min-h-[52px]"
+              value={q.learningOutcome || ''}
+              onChange={(e) => handleBaseChange('learningOutcome', e.target.value)}
+              placeholder="YCCĐ cụ thể của bài học..."
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs text-slate-400 mb-1 font-medium">Nguồn tài liệu / vị trí tham chiếu</label>
+            <input
+              type="text"
+              className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+              value={q.sourceReference || ''}
+              onChange={(e) => handleBaseChange('sourceReference', e.target.value)}
+              placeholder="Ví dụ: SGK Địa lí 12 - Kết nối tri thức, Bài 1, trang..."
+            />
+          </div>
+        </div>
+
         {/* Stimulus Edit */}
-        <div>
-          <label className="block text-xs text-slate-400 mb-1 font-medium">Đoạn thông tin / Ngữ liệu (Tuỳ chọn)</label>
+        <div className="rounded-lg border border-white/10 bg-slate-900/70 p-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Loại ngữ liệu</label>
+              <select
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.type || 'none'}
+                onChange={(e) => handleStimulusChange('type', e.target.value)}
+              >
+                <option value="none">Không có</option>
+                <option value="text">Đoạn thông tin</option>
+                <option value="table">Bảng số liệu</option>
+                <option value="chart">Biểu đồ</option>
+                <option value="map">Bản đồ/lược đồ</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Đơn vị</label>
+              <input
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.unit || ''}
+                onChange={(e) => handleStimulusChange('unit', e.target.value)}
+                placeholder="%, km, triệu người..."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Nguồn ngữ liệu</label>
+              <input
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.source || ''}
+                onChange={(e) => handleStimulusChange('source', e.target.value)}
+                placeholder="VD: Niên giám thống kê Việt Nam năm 2025"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Đường dẫn nguồn chính thức</label>
+              <input
+                type="url"
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.sourceUrl || ''}
+                onChange={(e) => handleStimulusChange('sourceUrl', e.target.value)}
+                placeholder="https://www.gso.gov.vn/..."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Tên/số bảng hoặc mã chỉ tiêu</label>
+              <input
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.sourceDataset || ''}
+                onChange={(e) => handleStimulusChange('sourceDataset', e.target.value)}
+                placeholder="Tên bảng NGTK; mã chỉ tiêu WDI; miền dữ liệu FAOSTAT"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Năm/giai đoạn dữ liệu</label>
+              <input
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.dataYear || ''}
+                onChange={(e) => handleStimulusChange('dataYear', e.target.value)}
+                placeholder="2020; 2024 hoặc 2015–2024"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Ngày truy cập (World Bank/FAOSTAT)</label>
+              <input
+                type="date"
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.accessedAt || ''}
+                onChange={(e) => handleStimulusChange('accessedAt', e.target.value)}
+              />
+            </div>
+            <div className="md:col-span-4">
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Tên ngữ liệu/bảng/biểu đồ</label>
+              <input
+                className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                value={q.stimulus?.title || ''}
+                onChange={(e) => handleStimulusChange('title', e.target.value)}
+                placeholder="Tên bảng, biểu đồ hoặc đoạn thông tin..."
+              />
+            </div>
+            {q.stimulus?.type === 'chart' && (
+              <div className="md:col-span-2">
+                <label className="block text-xs text-slate-400 mb-1 font-medium">Loại biểu đồ</label>
+                <select
+                  className="w-full bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500"
+                  value={q.stimulus?.chartType || ''}
+                  onChange={(e) => handleStimulusChange('chartType', e.target.value)}
+                >
+                  <option value="">Chọn loại biểu đồ</option>
+                  <option value="column">Cột</option>
+                  <option value="bar">Thanh ngang</option>
+                  <option value="line">Đường</option>
+                  <option value="area">Miền</option>
+                  <option value="pie">Tròn</option>
+                  <option value="combined">Kết hợp</option>
+                </select>
+              </div>
+            )}
+          </div>
+          <label className="block text-xs text-slate-400 mb-1 font-medium">Đoạn thông tin / dữ liệu hàng-cột để vẽ bảng, biểu đồ</label>
           <textarea
             className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500 min-h-[60px]"
             value={q.stimulus?.content || ''}
             onChange={(e) => handleStimulusChange('content', e.target.value)}
-            placeholder="Nội dung ngữ liệu..."
+            placeholder={'Ví dụ:\nNăm | Dân số | GDP\n2020 | 97,6 | 271\n2024 | 101,3 | 476'}
           />
         </div>
 
@@ -153,6 +376,16 @@ export default function QuizQuestionEditor({ question, onSave, onCancel }: QuizQ
         {/* Short Answer Edit */}
         {q.type === 'short_answer' && (
           <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Dữ liệu đầu vào để đối chiếu phép tính</label>
+              <textarea
+                className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 font-mono focus:outline-none focus:border-purple-500 min-h-[88px]"
+                value={inputDataText}
+                onChange={(e) => setInputDataText(e.target.value)}
+                placeholder={'Mỗi dòng một dữ kiện, ví dụ:\nDân số = 101.3\nDiện tích = 331344'}
+              />
+              <div className="mt-1 text-[11px] text-slate-500">Dùng dấu = hoặc : giữa tên dữ kiện và giá trị.</div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-slate-400 mb-1 font-medium">Đáp án chính xác</label>
@@ -174,6 +407,39 @@ export default function QuizQuestionEditor({ question, onSave, onCancel }: QuizQ
                 />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">Công thức</label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                  value={q.shortAnswer?.formula || ''}
+                  onChange={(e) => handleShortAnswerChange('formula', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">Sai số cho phép</label>
+                <input
+                  type="number"
+                  step="any"
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                  value={q.shortAnswer?.tolerance ?? 0}
+                  onChange={(e) => handleShortAnswerChange('tolerance', parseFloat(e.target.value))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1 font-medium">Số ô tối đa</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                  value={q.shortAnswer?.maxCharacters ?? 4}
+                  onChange={(e) => handleShortAnswerChange('maxCharacters', parseInt(e.target.value, 10))}
+                />
+              </div>
+            </div>
             
             <div>
               <label className="block text-xs text-slate-400 mb-1 font-medium">Yêu cầu làm tròn</label>
@@ -182,6 +448,16 @@ export default function QuizQuestionEditor({ question, onSave, onCancel }: QuizQ
                 className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-purple-500"
                 value={q.shortAnswer?.rounding || ''}
                 onChange={(e) => handleShortAnswerChange('rounding', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-400 mb-1 font-medium">Định dạng đáp án</label>
+              <input
+                type="text"
+                className="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-purple-500"
+                value={q.shortAnswer?.answerFormat || 'Phiếu trả lời 4 ô, nhập số, không nhập đơn vị'}
+                onChange={(e) => handleShortAnswerChange('answerFormat', e.target.value)}
               />
             </div>
 

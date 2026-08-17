@@ -1,7 +1,8 @@
 // ─── AppLayout – Main authenticated layout wrapper ─────────────────────────────
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth, UserRole } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../store/authStore';
 import { useAppContext, xpToLevel, levelName } from '../contexts/AppContext';
 import {
   Home, BookOpen, Play, Brain, Map, Users, BarChart3, Settings,

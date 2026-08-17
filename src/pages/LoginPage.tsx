@@ -29,7 +29,10 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
 
   const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-3.5-flash');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash';
+    return savedModel === 'gemini-3.1-pro' ? 'gemini-3.1-pro-preview' : savedModel;
+  });
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -439,7 +442,8 @@ export default function LoginPage() {
                     className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white focus:border-teal-500 focus:outline-none transition-colors"
                   >
                     <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mặc định)</option>
-                    <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                    <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
                   </select>
                 </div>
               </div>

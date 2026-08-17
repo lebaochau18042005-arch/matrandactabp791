@@ -16,6 +16,7 @@ export interface GeoAIInput {
   localContext?: string;
   previousContext?: string; // Tích hợp các nội dung đã sinh trước đó (Mục tiêu, Khởi động...)
   blocks?: any[]; // To hold all blocks for the export_word prompt
+  digitalTools?: any;
 }
 
 export interface GeoAIOutput {
@@ -23,6 +24,8 @@ export interface GeoAIOutput {
   content: string;
   suggestions: string[];
   createdAt: string;
+  rawData?: any;
+  resultContent?: string;
 }
 
 export const generateGeoAIContent = async (input: GeoAIInput): Promise<GeoAIOutput> => {

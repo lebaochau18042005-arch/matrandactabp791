@@ -339,7 +339,7 @@ function drawScene(
       ctx.stroke();
 
       // Glowing dot indicating subsolar position
-      const rad = Math.sin(frame * 0.05) * 4 + 8;
+      const rad = Math.sin(Date.now() * 0.003) * 4 + 8;
       const g = ctx.createRadialGradient(boxX + boxW / 2, subsolarY, 1, boxX + boxW / 2, subsolarY, rad);
       g.addColorStop(0, '#fff');
       g.addColorStop(0.4, '#fbbf24');

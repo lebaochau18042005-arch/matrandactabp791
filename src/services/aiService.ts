@@ -408,7 +408,7 @@ Chỉ trả về JSON hợp lệ theo cấu trúc sau (không thêm lời dẫn)
           if (input.blocks) {
             const getBlockContent = (type: string) => input.blocks?.filter(b => b.type === type).map(b => b.content).join("\n");
             
-            userPromptTemplate = `
+            const userPromptTemplate = `
 THÔNG TIN CHUNG:
 - Lớp: ${input.grade}
 - Bài học: ${input.lessonTitle}
@@ -608,7 +608,7 @@ ${jsonFormatInstruction}
           resultContent?: string;
           rawData?: any;
         }
-        let parsed: GeoAIOutput = { title: "Lỗi tạo nội dung", content: text, suggestions: [] };
+        let parsed: any = { title: "Lỗi tạo nội dung", content: text, suggestions: [] };
         let rawJsonObj: any = null;
         
         try {

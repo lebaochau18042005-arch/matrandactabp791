@@ -1354,7 +1354,7 @@ const MatrixModule = () => {
   const [pointConfig, setPointConfig] = useState({
     mc: 0.25,
     tf: 1.0,
-    short: 0.5,
+    short: 0.25,
     essay: 1.0
   });
 
@@ -3591,7 +3591,7 @@ Yêu cầu nội dung & số lượng câu hỏi:
                 {activeShuffledExam.part2 && activeShuffledExam.part2.length > 0 && (
                   <section className="space-y-4">
                     <h4 className="font-bold text-md uppercase">PHẦN II. Câu hỏi trắc nghiệm Đúng - Sai ({ (totals.tf.total * pointConfig.tf).toFixed(2) } điểm)</h4>
-                    <p className="text-xs italic text-slate-500">Thí sinh trả lời từ Câu 1 đến Câu {activeShuffledExam.part2.length}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai.</p>
+                    <p className="text-xs italic text-slate-500">Thí sinh trả lời từ Câu 1 đến Câu {activeShuffledExam.part2.length}. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn Đúng hoặc Sai. Mỗi câu tính theo chuẩn BGD: đúng 1 ý = 0,1 điểm; 2 ý = 0,25 điểm; 3 ý = 0,5 điểm; 4 ý = 1 điểm.</p>
                     <div className="space-y-4 pl-2">
                       {activeShuffledExam.part2.map((q) => (
                         <div key={q.id} className="space-y-2">
@@ -3613,7 +3613,7 @@ Yêu cầu nội dung & số lượng câu hỏi:
                 {activeShuffledExam.part3 && activeShuffledExam.part3.length > 0 && (
                   <section className="space-y-4">
                     <h4 className="font-bold text-md uppercase">PHẦN III. Câu hỏi trắc nghiệm trả lời ngắn ({ (totals.short.total * pointConfig.short).toFixed(2) } điểm)</h4>
-                    <p className="text-xs italic text-slate-500">Thí sinh trả lời từ Câu 1 đến Câu {activeShuffledExam.part3.length}. Điền đáp số tính toán áp dụng công thức đặc thù của môn Địa lí.</p>
+                    <p className="text-xs italic text-slate-500">Thí sinh trả lời từ Câu 1 đến Câu {activeShuffledExam.part3.length}. Điền đáp số tính toán áp dụng công thức đặc thù của môn Địa lí. Mỗi câu đúng được 0,25 điểm.</p>
                     <div className="space-y-4 pl-2">
                       {activeShuffledExam.part3.map((q) => (
                         <div key={q.id} className="space-y-1">
@@ -5120,7 +5120,7 @@ interface SimulationDocument {
   grade: string;
   content: string;
   comments: CommentItem[];
-  previewType: 'atmosphere' | 'earth' | 'japan' | 'sunray' | 'coordinate' | 'volcano' | 'ocean' | 'tide' | 'daynight' | 'timezone' | 'seasons' | 'windpressure' | 'orographicrain' | 'generic';
+  previewType: string;
   canvasCode?: string;
 }
 
@@ -7131,11 +7131,11 @@ Hãy đọc kỹ tài liệu cũ và yêu cầu chỉnh sửa, sau đó viết l
                     ) : activeDoc.previewType === 'windpressure' ? (
                       <WindPressureSim />
                     ) : activeDoc.previewType === 'orographicrain' ? (
-                      <OrographicRainSim customParams={parsedSimData.params} customQuestions={parsedSimData.quiz} />
+                      <OrographicRainSim customParams={parsedSimData.params} customQuestions={parsedSimData.quiz?.map((q: any, idx: number) => ({ id: `q_${idx}`, hint: q.q, answer: q.a, options: q.opts }))} />
                     ) : activeDoc.previewType === 'solar-system' ? (
-                      <SolarSystemSim customParams={parsedSimData.params} customQuestions={parsedSimData.quiz} />
+                      <SolarSystemSim customParams={parsedSimData.params} customQuestions={parsedSimData.quiz?.map((q: any, idx: number) => ({ id: `q_${idx}`, hint: q.q, answer: q.a, options: q.opts }))} />
                     ) : activeDoc.previewType === 'zenith-sun' ? (
-                      <ZenithSunSim customParams={parsedSimData.params} customQuestions={parsedSimData.quiz} />
+                      <ZenithSunSim customParams={parsedSimData.params} customQuestions={parsedSimData.quiz?.map((q: any, idx: number) => ({ id: `q_${idx}`, hint: q.q, answer: q.a, options: q.opts }))} />
                     ) : activeDoc.canvasCode ? (
                       <AICanvasSimulator 
                         canvasCode={activeDoc.canvasCode} 

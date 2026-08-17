@@ -117,7 +117,7 @@ function SimCanvas({
     case 'seasons':       return <SeasonsSim />;
     case 'timezone':      return <TimeZoneSim />;
     case 'coordinate':    return <CoordinateSim />;
-    case 'sunray':        return <SunraySim customParams={customParams} />;
+    case 'sunray':        return <SunraySim />;
     case 'atmosphere':    return <AtmosphericCirculationSim />;
     case 'windpressure':  return <WindPressureSim />;
     case 'orographicrain':return <OrographicRainSim customParams={customParams} customQuestions={customQuestions} />;
@@ -365,7 +365,12 @@ export default function SimViewerPage() {
     
     // Update Supabase if this is an assignment
     if (assignmentId) {
-      updateScore(assignmentId, score);
+      updateScore(assignmentId, score, {
+        class_name: '10A1',
+        activity_type: 'simulation',
+        activity_title: sim.name,
+        score_label: `${score}%`,
+      });
     }
   };
 

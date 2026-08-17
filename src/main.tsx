@@ -26,6 +26,7 @@ const Settings       = lazy(() => import('./pages/SettingsPage'));
 const QuizCreate     = lazy(() => import('./pages/quiz/QuizCreatePage'));
 const QuizAnswer     = lazy(() => import('./pages/quiz/QuizAnswerPage'));
 const QuizResult     = lazy(() => import('./pages/quiz/QuizResultPage'));
+const TaskSubmission = lazy(() => import('./pages/TaskSubmissionPage'));
 
 // ─── Full-screen loading fallback ─────────────────────────────────────────────
 function PageLoader() {
@@ -73,6 +74,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="/quiz/create"   element={<QuizCreate />} />
               <Route path="/quiz/:id"      element={<QuizAnswer />} />
               <Route path="/quiz/:id/result" element={<QuizResult />} />
+              <Route path="/tasks/:id"      element={<TaskSubmission />} />
               <Route path="/quiz-live"     element={<QuizLive />} />
               <Route path="/map-lab"       element={<MapLab />} />
 

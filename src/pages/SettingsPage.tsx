@@ -49,7 +49,10 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') ?? '');
   const [showKey, setShowKey] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_model') || 'gemini-3.5-flash');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash';
+    return savedModel === 'gemini-3.1-pro' ? 'gemini-3.1-pro-preview' : savedModel;
+  });
 
   // Appearance
   const [animQuality, setAnimQuality] = useState<'high' | 'medium' | 'low'>('high');
@@ -227,7 +230,8 @@ export default function SettingsPage() {
               className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 focus:outline-none transition-colors"
             >
               <option value="gemini-3.5-flash">⚡ Gemini 3.5 Flash (Khuyến nghị - Nhanh & Miễn phí)</option>
-              <option value="gemini-3.1-pro">🧠 Gemini 3.1 Pro (Mạnh nhất)</option>
+              <option value="gemini-3-flash-preview">⚡ Gemini 3 Flash Preview (Dự phòng)</option>
+              <option value="gemini-3.1-pro-preview">🧠 Gemini 3.1 Pro Preview (Mạnh nhất)</option>
             </select>
             <p className="text-xs text-slate-500 mt-1">Model sẽ được dùng để tạo câu hỏi và nội dung AI.</p>
           </div>

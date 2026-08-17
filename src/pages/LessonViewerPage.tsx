@@ -5,6 +5,7 @@ import AppLayout from '../layouts/AppLayout';
 import { supabase } from '../lib/supabase';
 import { useSubmissionStore } from '../store/submissionStore';
 import { useAppContext } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LessonViewerPage() {
   const { id } = useParams();
@@ -15,6 +16,8 @@ export default function LessonViewerPage() {
   const [lesson, setLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { completeQuiz } = useAppContext();
+  const { updateScore } = useSubmissionStore();
+  const { user } = useAuth();
   
   useEffect(() => {
     async function loadLesson() {
@@ -40,11 +43,17 @@ export default function LessonViewerPage() {
     loadLesson();
   }, [id, navigate]);
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (assignmentId) {
-      // In a real app, update submission store to set score/completed
-      // For now, we just give XP
       completeQuiz(`lesson_${id}`, 100);
+      await updateScore(assignmentId, 100, {
+        class_name: '10A1',
+        student_id: user?.id,
+        student_name: user?.name || 'Học sinh Demo',
+        activity_type: 'lesson',
+        activity_title: lesson?.title || 'Bài giảng GeoHub',
+        score_label: 'Hoàn thành',
+      });
       toast.success("Chúc mừng! Bạn đã hoàn thành bài học và nhận được 100 XP!");
     }
     navigate('/student');
