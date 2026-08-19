@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { GeneratedQuiz } from '../utils/mockAIGenerator';
+import type { ExamValidationReport } from '../utils/examValidation';
 
 export interface QuizAttempt {
   id: string;
@@ -21,10 +22,12 @@ export interface QuizAttempt {
 interface QuizState {
   generatedQuizzes: Record<string, GeneratedQuiz>;
   quizAttempts: Record<string, QuizAttempt>;
+  validationHistory: Record<string, ExamValidationReport[]>;
   
   addQuiz: (quiz: GeneratedQuiz) => void;
   updateQuiz: (quizId: string, quiz: GeneratedQuiz) => void;
   deleteQuiz: (quizId: string) => void;
+  addValidationReport: (quizId: string, report: ExamValidationReport) => void;
   
   startAttempt: (quizId: string, studentId: string, studentName: string) => string;
   updateAnswer: (attemptId: string, questionId: string, answer: any) => void;
@@ -39,6 +42,7 @@ export const useQuizStore = create<QuizState>()(
     (set) => ({
       generatedQuizzes: {},
       quizAttempts: {},
+      validationHistory: {},
       liveQuizData: null,
       
       addQuiz: (quiz) => set((state) => ({
@@ -53,6 +57,16 @@ export const useQuizStore = create<QuizState>()(
         const next = { ...state.generatedQuizzes };
         delete next[quizId];
         return { generatedQuizzes: next };
+      }),
+
+      addValidationReport: (quizId, report) => set((state) => {
+        const current = state.validationHistory[quizId] || [];
+        return {
+          validationHistory: {
+            ...state.validationHistory,
+            [quizId]: [report, ...current].slice(0, 20),
+          }
+        };
       }),
       
       startAttempt: (quizId, studentId, studentName) => {

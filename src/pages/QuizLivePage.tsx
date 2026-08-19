@@ -3,6 +3,7 @@ import AppLayout from "../layouts/AppLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { useQuizStore } from "../store/quizStore";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { toast } from "sonner";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ const OPTION_COLORS = [
     light: "#86efac",
   },
 ];
+const JOIN_CODE = "GEO-10A1";
 
 // ─── Timer bar component ───────────────────────────────────────────────────────
 function TimerBar({
@@ -260,6 +262,19 @@ export default function QuizLivePage() {
   ];
 
   const correctCount = MOCK_STUDENTS.filter((s) => s.correct).length;
+  const responseCount = phase === "question"
+    ? Math.min(MOCK_STUDENTS.length, Math.max(1, MOCK_STUDENTS.length - Math.ceil(timeLeft / 8)))
+    : MOCK_STUDENTS.length;
+  const responseRate = Math.round((responseCount / MOCK_STUDENTS.length) * 100);
+
+  const copyJoinCode = async () => {
+    try {
+      await navigator.clipboard.writeText(JOIN_CODE);
+      toast.success("Đã sao chép mã tham gia.");
+    } catch {
+      toast.info(`Mã tham gia: ${JOIN_CODE}`);
+    }
+  };
 
   return (
     <AppLayout>
@@ -286,10 +301,12 @@ export default function QuizLivePage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
             marginBottom: 20,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <div
               style={{
                 background: "#1e293b",
@@ -336,22 +353,70 @@ export default function QuizLivePage() {
             >
               Câu {currentQ + 1} / {QUIZ_QUESTIONS.length}
             </div>
+            <button
+              onClick={copyJoinCode}
+              style={{
+                color: "#5eead4",
+                fontSize: 13,
+                background: "rgba(20,184,166,0.1)",
+                border: "1px solid rgba(20,184,166,0.25)",
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontWeight: 700,
+                fontFamily: "inherit",
+              }}
+            >
+              Mã lớp: {JOIN_CODE}
+            </button>
+            <div
+              style={{
+                color: "#94a3b8",
+                fontSize: 13,
+                background: "#1e293b",
+                border: "1px solid #334155",
+                borderRadius: 8,
+                padding: "6px 14px",
+              }}
+            >
+              Đã trả lời {responseCount}/{MOCK_STUDENTS.length} · {responseRate}%
+            </div>
           </div>
-          <button
-            onClick={() => setFullscreen(!fullscreen)}
-            style={{
-              background: "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: 8,
-              padding: "6px 14px",
-              color: "#94a3b8",
-              fontSize: 12,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            {fullscreen ? "⊡ Thu nhỏ" : "⊞ Toàn màn hình"}
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {phase === "question" && (
+              <button
+                onClick={() => setTimerActive(v => !v)}
+                style={{
+                  background: timerActive ? "rgba(251,191,36,0.12)" : "rgba(52,211,153,0.12)",
+                  border: `1px solid ${timerActive ? "rgba(251,191,36,0.35)" : "rgba(52,211,153,0.35)"}`,
+                  borderRadius: 8,
+                  padding: "6px 14px",
+                  color: timerActive ? "#fbbf24" : "#34d399",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  fontWeight: 700,
+                }}
+              >
+                {timerActive ? "⏸ Tạm dừng" : "▶ Tiếp tục"}
+              </button>
+            )}
+            <button
+              onClick={() => setFullscreen(!fullscreen)}
+              style={{
+                background: "#1e293b",
+                border: "1px solid #334155",
+                borderRadius: 8,
+                padding: "6px 14px",
+                color: "#94a3b8",
+                fontSize: 12,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {fullscreen ? "⊡ Thu nhỏ" : "⊞ Toàn màn hình"}
+            </button>
+          </div>
         </div>
 
         {/* ── FINAL SCREEN ───────────────────────── */}

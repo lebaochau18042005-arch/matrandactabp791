@@ -17,6 +17,17 @@ import {
   Table,
   CalendarClock,
   Database,
+  Filter,
+  Search,
+  Upload,
+  Link2,
+  Copy,
+  Edit2,
+  BookOpen,
+  ClipboardList,
+  PenLine,
+  HelpCircle,
+  Video,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -28,10 +39,27 @@ import { useAuth } from '../contexts/AuthContext';
 import AppLayout from '../layouts/AppLayout';
 import { supabase } from '../lib/supabase';
 import { useLessonStore } from '../store/lessonStore';
-import { useAssignmentStore } from '../store/assignmentStore';
+import { useAssignmentStore, type AssignmentTaskType } from '../store/assignmentStore';
+import { useQuizStore } from '../store/quizStore';
+import {
+  GOOGLE_SHEET_APPS_SCRIPT_SAMPLE,
+  getGoogleSheetSettings,
+  getSavedRosters,
+  importRosterFromGoogleSheet,
+  parseRosterFile,
+  saveGoogleSheetSettings,
+  saveRoster,
+  syncResultToGoogleSheet,
+  type ImportedStudent,
+} from '../lib/googleSheetSync';
+
+type Status = 'excellent' | 'good' | 'warning' | 'danger';
+type ClassName = string;
+type SortMode = 'risk' | 'score' | 'xp' | 'name';
+type Student = ImportedStudent;
 
 // ─── Mock students ────────────────────────────────────────────────────────────
-const STUDENTS = [
+const STUDENTS: Student[] = [
   { id: 1, name: 'Nguyễn Minh Tuấn', xp: 2100, simsViewed: 11, avgScore: 9.2, status: 'excellent', avatar: 'MT' },
   { id: 2, name: 'Lê Thị Lan Anh',    xp: 1850, simsViewed: 9,  avgScore: 8.8, status: 'good',      avatar: 'LA' },
   { id: 3, name: 'Trần Văn An',        xp: 1250, simsViewed: 6,  avgScore: 7.5, status: 'good',      avatar: 'TA' },
@@ -40,7 +68,7 @@ const STUDENTS = [
   { id: 6, name: 'Vũ Thị Mai',         xp: 750,  simsViewed: 3,  avgScore: 6.2, status: 'warning',   avatar: 'VM' },
   { id: 7, name: 'Bùi Quốc Cường',     xp: 420,  simsViewed: 2,  avgScore: 5.5, status: 'danger',    avatar: 'QC' },
   { id: 8, name: 'Trương Thị Hoa',     xp: 200,  simsViewed: 1,  avgScore: 4.0, status: 'danger',    avatar: 'TH' },
-] as const;
+];
 
 const SIM_OPTIONS = [
   { id: 'daynight',     label: 'Ngày đêm luân phiên' },
@@ -52,9 +80,73 @@ const SIM_OPTIONS = [
   { id: 'ocean',        label: 'Dòng biển' },
 ];
 
-const CLASS_OPTIONS = ['10A1', '11B2'];
+const DEFAULT_CLASS_OPTIONS: ClassName[] = ['10A1', '11B2'];
 
-type Status = 'excellent' | 'good' | 'warning' | 'danger';
+const CLASS_STUDENTS: Record<string, Student[]> = {
+  '10A1': STUDENTS,
+  '11B2': STUDENTS.map((student, index) => {
+    const avgScore = Number(Math.max(4, student.avgScore - 0.35 + (index % 2) * 0.2).toFixed(1));
+    const status: Status =
+      avgScore >= 8.5 ? 'excellent' :
+      avgScore >= 7 ? 'good' :
+      avgScore >= 6 ? 'warning' :
+      'danger';
+
+    return {
+      ...student,
+      xp: Math.max(180, student.xp - 140 + index * 30),
+      simsViewed: Math.max(1, student.simsViewed - (index % 3)),
+      avgScore,
+      status,
+    };
+  }),
+};
+
+const STATUS_FILTERS: Array<{ id: 'all' | Status; label: string }> = [
+  { id: 'all', label: 'Tất cả trạng thái' },
+  { id: 'excellent', label: 'Xuất sắc' },
+  { id: 'good', label: 'Tốt' },
+  { id: 'warning', label: 'Cần chú ý' },
+  { id: 'danger', label: 'Nguy hiểm' },
+];
+
+const SORT_OPTIONS: Array<{ id: SortMode; label: string }> = [
+  { id: 'risk', label: 'Ưu tiên hỗ trợ' },
+  { id: 'score', label: 'Điểm cao trước' },
+  { id: 'xp', label: 'XP cao trước' },
+  { id: 'name', label: 'Tên A-Z' },
+];
+
+const ASSIGNMENT_TYPE_OPTIONS: Array<{ id: AssignmentTaskType; label: string; hint: string }> = [
+  { id: 'simulation', label: 'Mô phỏng', hint: 'Tương tác 3D' },
+  { id: 'quiz', label: 'Quiz', hint: 'Bài kiểm tra' },
+  { id: 'lesson', label: 'Bài giảng', hint: 'Xem trực tuyến' },
+  { id: 'worksheet', label: 'Phiếu học tập', hint: 'Trả lời theo yêu cầu' },
+  { id: 'essay', label: 'Tự luận', hint: 'Bài viết dài' },
+];
+
+const DEFAULT_POINTS: Record<AssignmentTaskType, number> = {
+  simulation: 30,
+  quiz: 100,
+  lesson: 50,
+  worksheet: 70,
+  essay: 100,
+};
+
+const normalizeSearch = (value: string) =>
+  value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+
+const progressPct = (s: Student) => Math.round((s.simsViewed / 14) * 100);
+
+const readClassOptions = (): ClassName[] => {
+  try {
+    const saved = localStorage.getItem('geohub_class_names');
+    const parsed = saved ? JSON.parse(saved) : [];
+    return Array.isArray(parsed) && parsed.length ? Array.from(new Set(parsed)) : DEFAULT_CLASS_OPTIONS;
+  } catch {
+    return DEFAULT_CLASS_OPTIONS;
+  }
+};
 
 const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   excellent: { label: 'Xuất sắc',    color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: <CheckCircle2 size={13} /> },
@@ -69,11 +161,24 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { lessons } = useLessonStore();
   const { assignTask } = useAssignmentStore();
+  const { generatedQuizzes } = useQuizStore();
   
-  const [activeTab, setActiveTab] = useState<'10A1' | '11B2'>('10A1');
+  const [activeTab, setActiveTab] = useState<ClassName>(() => readClassOptions()[0] ?? '10A1');
+  const [selectedTaskType, setSelectedTaskType] = useState<AssignmentTaskType>('simulation');
   const [selectedTask, setSelectedTask] = useState('');
-  const [selectedClass, setSelectedClass] = useState('10A1');
+  const [customTaskTitle, setCustomTaskTitle] = useState('');
+  const [customTaskDescription, setCustomTaskDescription] = useState('');
+  const [taskPoints, setTaskPoints] = useState(DEFAULT_POINTS.simulation);
+  const [selectedClass, setSelectedClass] = useState<ClassName>(() => readClassOptions()[0] ?? '10A1');
   const [deadline, setDeadline] = useState('');
+  const [studentQuery, setStudentQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | Status>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('risk');
+  const [classOptions, setClassOptions] = useState<ClassName[]>(() => readClassOptions());
+  const [classRosters, setClassRosters] = useState<Record<string, Student[]>>(() => getSavedRosters());
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importingRoster, setImportingRoster] = useState(false);
+  const [sheetSettings, setSheetSettings] = useState(() => getGoogleSheetSettings());
 
   React.useEffect(() => {
     if (user) {
@@ -81,35 +186,235 @@ export default function TeacherDashboard() {
     }
   }, [user]);
 
-  // Merge default simulations and user's lessons into one dropdown
-  const TASK_OPTIONS = [
-    { type: 'group', label: 'Bài giảng của tôi', items: lessons.map(l => ({ id: `lesson_${l.id}`, label: l.title })) },
-    { type: 'group', label: 'Mô phỏng 3D', items: SIM_OPTIONS.map(s => ({ id: `sim_${s.id}`, label: s.label })) }
-  ];
+  const quizzes = React.useMemo(() => Object.values(generatedQuizzes), [generatedQuizzes]);
+  const contentOptions = React.useMemo(() => {
+    if (selectedTaskType === 'lesson') {
+      return lessons.map(lesson => ({ id: lesson.id, label: lesson.title }));
+    }
+    if (selectedTaskType === 'quiz') {
+      return quizzes.map(quiz => ({ id: quiz.id, label: quiz.title }));
+    }
+    if (selectedTaskType === 'simulation') {
+      return SIM_OPTIONS.map(sim => ({ id: sim.id, label: sim.label }));
+    }
+    return [];
+  }, [lessons, quizzes, selectedTaskType]);
+  const currentTaskType = ASSIGNMENT_TYPE_OPTIONS.find(option => option.id === selectedTaskType);
+  const selectedContent = contentOptions.find(option => option.id === selectedTask);
+
+  const changeTaskType = (taskType: AssignmentTaskType) => {
+    setSelectedTaskType(taskType);
+    setSelectedTask('');
+    setTaskPoints(DEFAULT_POINTS[taskType]);
+  };
+
+  const activeStudents = classRosters[activeTab] ?? CLASS_STUDENTS[activeTab] ?? [];
+  const filteredStudents = React.useMemo(() => {
+    const q = normalizeSearch(studentQuery.trim());
+    const riskRank: Record<Status, number> = { danger: 0, warning: 1, good: 2, excellent: 3 };
+
+    return activeStudents
+      .filter((student) => {
+        const matchesQuery = !q || normalizeSearch(`${student.name} ${student.avatar}`).includes(q);
+        const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
+        return matchesQuery && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (sortMode === 'risk') return riskRank[a.status] - riskRank[b.status] || a.avgScore - b.avgScore;
+        if (sortMode === 'score') return b.avgScore - a.avgScore;
+        if (sortMode === 'xp') return b.xp - a.xp;
+        return a.name.localeCompare(b.name, 'vi');
+      });
+  }, [activeStudents, studentQuery, statusFilter, sortMode]);
+
+  const averageScore = activeStudents.length
+    ? activeStudents.reduce((sum, student) => sum + student.avgScore, 0) / activeStudents.length
+    : 0;
+  const completionRate = activeStudents.length
+    ? Math.round(activeStudents.reduce((sum, student) => sum + progressPct(student), 0) / activeStudents.length)
+    : 0;
+  const attentionStudents = activeStudents
+    .filter((student) => student.status === 'warning' || student.status === 'danger')
+    .sort((a, b) => a.avgScore - b.avgScore);
+
+  const persistClassOptions = (options: ClassName[]) => {
+    const cleaned = Array.from(new Set(options.map(option => option.trim()).filter(Boolean)));
+    localStorage.setItem('geohub_class_names', JSON.stringify(cleaned));
+    return cleaned;
+  };
+
+  const applyRoster = (students: Student[], className = activeTab) => {
+    if (!students.length) {
+      toast.error('Không tìm thấy học sinh hợp lệ trong danh sách.');
+      return;
+    }
+
+    saveRoster(className, students);
+    setClassRosters((current) => ({ ...current, [className]: students }));
+    setClassOptions((current) => persistClassOptions([...current, className]));
+    setActiveTab(className);
+    setSelectedClass(className);
+    setStudentQuery('');
+    setStatusFilter('all');
+    toast.success(`Đã nhập ${students.length} học sinh cho lớp ${className}.`);
+  };
+
+  const handleRenameClass = (oldName: ClassName) => {
+    const newName = window.prompt('Nhập tên lớp mới', oldName)?.trim();
+    if (!newName || newName === oldName) return;
+    if (classOptions.some(cls => cls !== oldName && cls.toLowerCase() === newName.toLowerCase())) {
+      toast.error('Tên lớp này đã tồn tại.');
+      return;
+    }
+
+    setClassOptions((current) => persistClassOptions(current.map(cls => cls === oldName ? newName : cls)));
+    setClassRosters((current) => {
+      const next = { ...current };
+      const roster = current[oldName] ?? CLASS_STUDENTS[oldName];
+      delete next[oldName];
+      if (roster) next[newName] = roster;
+      localStorage.setItem('geohub_class_rosters', JSON.stringify(next));
+      return next;
+    });
+
+    if (activeTab === oldName) setActiveTab(newName);
+    if (selectedClass === oldName) setSelectedClass(newName);
+    toast.success(`Đã đổi tên lớp ${oldName} thành ${newName}.`);
+  };
+
+  const handleRosterFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImportingRoster(true);
+      const students = await parseRosterFile(file);
+      applyRoster(students);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không nhập được danh sách lớp.');
+    } finally {
+      setImportingRoster(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleGoogleRosterImport = async () => {
+    if (!sheetSettings.rosterSheetUrl.trim()) {
+      toast.error('Vui lòng nhập link Google Sheet danh sách lớp.');
+      return;
+    }
+
+    try {
+      setImportingRoster(true);
+      const students = await importRosterFromGoogleSheet(sheetSettings.rosterSheetUrl);
+      saveGoogleSheetSettings(sheetSettings);
+      applyRoster(students);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không đọc được Google Sheet.');
+    } finally {
+      setImportingRoster(false);
+    }
+  };
+
+  const handleSaveGoogleSheetSettings = () => {
+    saveGoogleSheetSettings(sheetSettings);
+    toast.success('Đã lưu kết nối Google Sheet.');
+  };
+
+  const handleCopyAppsScript = async () => {
+    try {
+      await navigator.clipboard.writeText(GOOGLE_SHEET_APPS_SCRIPT_SAMPLE);
+      toast.success('Đã sao chép Apps Script mẫu.');
+    } catch {
+      toast.info('Không sao chép tự động được, hãy thử lại trong trình duyệt.');
+    }
+  };
+
+  const handleTestGoogleSheetSync = async () => {
+    try {
+      saveGoogleSheetSettings(sheetSettings);
+      const synced = await syncResultToGoogleSheet({
+        event: 'student_completed',
+        completed_at: new Date().toISOString(),
+        class_name: activeTab,
+        student_name: activeStudents[0]?.name ?? 'Học sinh mẫu',
+        activity_type: 'assignment',
+        activity_title: 'Dòng kiểm tra kết nối GeoHub',
+        score: 100,
+        score_label: '100%',
+        source: 'GeoHub',
+      });
+
+      if (!synced) {
+        toast.error('Hãy bật đồng bộ và nhập Apps Script Web App URL.');
+        return;
+      }
+
+      setSheetSettings(getGoogleSheetSettings());
+      toast.success('Đã gửi dòng kiểm tra sang Google Sheet.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không gửi được dữ liệu sang Google Sheet.');
+    }
+  };
 
   const handleAssign = async () => {
-    if (!selectedTask) { toast.error('Vui lòng chọn bài giảng/mô phỏng!'); return; }
     if (!deadline) { toast.error('Vui lòng chọn hạn chót!'); return; }
-    
-    const isLesson = selectedTask.startsWith('lesson_');
-    const actualId = selectedTask.split('_')[1];
+
+    const needsExistingContent = selectedTaskType === 'simulation' || selectedTaskType === 'lesson' || selectedTaskType === 'quiz';
+    if (needsExistingContent && !selectedTask) {
+      toast.error(`Vui lòng chọn ${currentTaskType?.label.toLowerCase() || 'nội dung'} để giao.`);
+      return;
+    }
+
+    const customTitle = customTaskTitle.trim();
+    const customDescription = customTaskDescription.trim();
+    if ((selectedTaskType === 'worksheet' || selectedTaskType === 'essay') && !customTitle) {
+      toast.error('Vui lòng nhập tên nhiệm vụ.');
+      return;
+    }
+    if ((selectedTaskType === 'worksheet' || selectedTaskType === 'essay') && !customDescription) {
+      toast.error('Vui lòng nhập yêu cầu cho học sinh.');
+      return;
+    }
+
+    const title = needsExistingContent
+      ? selectedContent?.label || currentTaskType?.label || 'Nhiệm vụ GeoHub'
+      : customTitle;
+    const description = needsExistingContent
+      ? `Hoàn thành ${currentTaskType?.label.toLowerCase()} được giao trong GeoHub.`
+      : customDescription;
 
     await assignTask({
       class_name: selectedClass,
-      lesson_id: isLesson ? actualId : null,
-      simulation_id: !isLesson ? actualId : null,
+      task_type: selectedTaskType,
+      title,
+      description,
+      points: taskPoints,
+      submission_type:
+        selectedTaskType === 'lesson' ? 'view' :
+        selectedTaskType === 'worksheet' || selectedTaskType === 'essay' ? 'text' :
+        'auto',
+      lesson_id: selectedTaskType === 'lesson' ? selectedTask : null,
+      simulation_id: selectedTaskType === 'simulation' ? selectedTask : null,
+      quiz_id: selectedTaskType === 'quiz' ? selectedTask : null,
       deadline,
     });
+
+    setSelectedTask('');
+    if (selectedTaskType === 'worksheet' || selectedTaskType === 'essay') {
+      setCustomTaskTitle('');
+      setCustomTaskDescription('');
+    }
   };
 
   const handleExportExcel = () => {
-    const data = STUDENTS.map(stu => ({
+    const data = filteredStudents.map(stu => ({
       'ID': stu.id,
       'Học sinh': stu.name,
       'XP': stu.xp,
       'Bài đã xem': stu.simsViewed,
       'Điểm TB': stu.avgScore,
-      'Trạng thái': STATUS_CONFIG[stu.status as Status].label,
+      'Trạng thái': STATUS_CONFIG[stu.status].label,
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -169,14 +474,14 @@ export default function TeacherDashboard() {
     const tableColumn = ["ID", "Hoc sinh", "XP", "Bai da xem", "Diem TB", "Trang thai"];
     const tableRows: any[] = [];
 
-    STUDENTS.forEach(stu => {
+    filteredStudents.forEach(stu => {
       tableRows.push([
         stu.id,
         stu.name,
         stu.xp,
         stu.simsViewed,
         stu.avgScore,
-        STATUS_CONFIG[stu.status as Status].label
+        STATUS_CONFIG[stu.status].label
       ]);
     });
 
@@ -190,14 +495,11 @@ export default function TeacherDashboard() {
     toast.success('Đã xuất file PDF thành công!');
   };
 
-  // simple progress bar width for a student (0-100%)
-  const progressPct = (s: typeof STUDENTS[number]) => Math.round((s.simsViewed / 14) * 100);
-
   const QUICK_STATS = [
-    { label: 'Lớp học', value: '10A1', sub: '32 học sinh', icon: <Users size={22} className="text-teal-400" />, border: 'border-teal-500/20', grad: 'from-teal-500/40 to-cyan-500/0' },
-    { label: 'Nhiệm vụ đã giao', value: '8', sub: 'đang hoạt động', icon: <CheckSquare size={22} className="text-blue-400" />, border: 'border-blue-500/20', grad: 'from-blue-500/40 to-blue-400/0' },
-    { label: 'Tỉ lệ hoàn thành', value: '73%', sub: 'trung bình lớp', icon: <TrendingUp size={22} className="text-emerald-400" />, border: 'border-emerald-500/20', grad: 'from-emerald-500/40 to-green-500/0' },
-    { label: 'Điểm trung bình', value: '8.4', sub: '/ 10 điểm', icon: <Star size={22} className="text-amber-400" />, border: 'border-amber-500/20', grad: 'from-amber-500/40 to-yellow-500/0' },
+    { label: 'Lớp học', value: activeTab, sub: `${activeStudents.length} học sinh`, icon: <Users size={22} className="text-teal-400" />, border: 'border-teal-500/20', grad: 'from-teal-500/40 to-cyan-500/0' },
+    { label: 'Nhiệm vụ đã giao', value: String(8 + lessons.length), sub: 'đang hoạt động', icon: <CheckSquare size={22} className="text-blue-400" />, border: 'border-blue-500/20', grad: 'from-blue-500/40 to-blue-400/0' },
+    { label: 'Tỉ lệ hoàn thành', value: `${completionRate}%`, sub: `Điểm TB ${averageScore.toFixed(1)}/10`, icon: <TrendingUp size={22} className="text-emerald-400" />, border: 'border-emerald-500/20', grad: 'from-emerald-500/40 to-green-500/0' },
+    { label: 'Cần hỗ trợ', value: String(attentionStudents.length), sub: attentionStudents[0]?.name ?? 'Lớp ổn định', icon: <Star size={22} className="text-amber-400" />, border: 'border-amber-500/20', grad: 'from-amber-500/40 to-yellow-500/0' },
   ];
 
   return (
@@ -235,29 +537,184 @@ export default function TeacherDashboard() {
           {/* Table side (2/3) */}
           <div className="xl:col-span-2 space-y-4">
             {/* Tabs */}
-            <div className="flex gap-2">
-              {CLASS_OPTIONS.map((cls) => (
-                <button
-                  key={cls}
-                  onClick={() => setActiveTab(cls as '10A1' | '11B2')}
-                  className={`px-5 py-2 rounded-xl text-sm font-semibold border transition-all duration-150
-                    ${activeTab === cls
-                      ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
-                      : 'bg-slate-800/60 text-slate-400 border-white/8 hover:border-white/20 hover:text-white'}`}
-                >
-                  Lớp {cls}
-                </button>
-              ))}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div className="flex gap-2 flex-wrap">
+                {classOptions.map((cls) => (
+                  <div
+                    key={cls}
+                    className={`flex items-center rounded-xl text-sm font-semibold border transition-all duration-150 overflow-hidden
+                      ${activeTab === cls
+                        ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                        : 'bg-slate-800/60 text-slate-400 border-white/8 hover:border-white/20 hover:text-white'}`}
+                  >
+                    <button
+                      onClick={() => {
+                        setActiveTab(cls);
+                        setSelectedClass(cls);
+                        setStudentQuery('');
+                        setStatusFilter('all');
+                      }}
+                      className="px-4 py-2 text-left"
+                    >
+                      Lớp {cls}
+                    </button>
+                    <button
+                      onClick={() => handleRenameClass(cls)}
+                      title={`Sửa tên lớp ${cls}`}
+                      aria-label={`Sửa tên lớp ${cls}`}
+                      className={`px-2.5 py-2 border-l transition-colors ${
+                        activeTab === cls
+                          ? 'border-teal-500/30 hover:bg-teal-500/20'
+                          : 'border-white/8 hover:bg-white/8'
+                      }`}
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setIsImportOpen(v => !v)}
+                className="px-4 py-2 rounded-xl bg-blue-500/15 text-blue-300 border border-blue-500/30 text-sm font-bold hover:bg-blue-500/25 transition-all flex items-center justify-center gap-2"
+              >
+                <Upload size={16} /> Nhập danh sách lớp
+              </button>
             </div>
+
+            {isImportOpen && (
+              <div className="rounded-2xl border border-blue-500/20 bg-slate-800/70 p-4 space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Upload size={16} className="text-blue-400" />
+                      <h3 className="text-white font-semibold text-sm">Nhập danh sách lớp {activeTab}</h3>
+                    </div>
+                    <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-slate-950/50 px-4 py-5 text-slate-300 text-sm font-semibold cursor-pointer hover:border-blue-500/40 hover:text-blue-300 transition-all">
+                      <Upload size={16} />
+                      Chọn file CSV/XLSX
+                      <input
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        className="hidden"
+                        onChange={handleRosterFileImport}
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        value={sheetSettings.rosterSheetUrl}
+                        onChange={(e) => setSheetSettings({ ...sheetSettings, rosterSheetUrl: e.target.value })}
+                        placeholder="Link Google Sheet danh sách lớp"
+                        className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500/50"
+                      />
+                      <button
+                        onClick={handleGoogleRosterImport}
+                        disabled={importingRoster}
+                        className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-white text-sm font-bold flex items-center gap-2"
+                      >
+                        <Link2 size={15} /> Nhập
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Database size={16} className="text-emerald-400" />
+                        <h3 className="text-white font-semibold text-sm">Google Sheet nhận kết quả</h3>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={sheetSettings.enabled}
+                          onChange={(e) => setSheetSettings({ ...sheetSettings, enabled: e.target.checked })}
+                          className="accent-emerald-500"
+                        />
+                        Bật đồng bộ
+                      </label>
+                    </div>
+                    <input
+                      value={sheetSettings.webhookUrl}
+                      onChange={(e) => setSheetSettings({ ...sheetSettings, webhookUrl: e.target.value })}
+                      placeholder="Apps Script Web App URL"
+                      className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-emerald-500/50"
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        onClick={handleSaveGoogleSheetSettings}
+                        className="px-3 py-2 rounded-xl bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-500/25 transition-all"
+                      >
+                        Lưu kết nối
+                      </button>
+                      <button
+                        onClick={handleTestGoogleSheetSync}
+                        className="px-3 py-2 rounded-xl bg-teal-500/15 text-teal-300 border border-teal-500/30 text-xs font-bold hover:bg-teal-500/25 transition-all"
+                      >
+                        Gửi thử
+                      </button>
+                      <button
+                        onClick={handleCopyAppsScript}
+                        className="px-3 py-2 rounded-xl bg-slate-950 text-slate-300 border border-white/10 text-xs font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1"
+                      >
+                        <Copy size={13} /> Script mẫu
+                      </button>
+                    </div>
+                    {sheetSettings.lastSyncAt && (
+                      <p className="text-[11px] text-slate-500">
+                        Gửi gần nhất: {new Date(sheetSettings.lastSyncAt).toLocaleString('vi-VN')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Student table */}
             <div className="rounded-2xl border border-white/10 bg-slate-800/60 overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users size={16} className="text-teal-400" />
-                  <span className="text-white font-semibold text-sm">Lớp {activeTab}</span>
+              <div className="px-4 py-3 border-b border-white/8 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} className="text-teal-400" />
+                    <span className="text-white font-semibold text-sm">Lớp {activeTab}</span>
+                  </div>
+                  <span className="text-xs text-slate-400">
+                    {filteredStudents.length}/{activeStudents.length} học sinh
+                  </span>
                 </div>
-                <span className="text-xs text-slate-400">{STUDENTS.length} học sinh</span>
+
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_180px_170px] gap-2">
+                  <label className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      value={studentQuery}
+                      onChange={(e) => setStudentQuery(e.target.value)}
+                      placeholder="Tìm học sinh..."
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900/55 border border-white/10 text-slate-200 placeholder-slate-600 text-sm focus:outline-none focus:border-teal-500/50"
+                    />
+                  </label>
+
+                  <label className="relative">
+                    <Filter size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as 'all' | Status)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900/55 border border-white/10 text-slate-200 text-sm focus:outline-none focus:border-teal-500/50 [color-scheme:dark]"
+                    >
+                      {STATUS_FILTERS.map((status) => (
+                        <option key={status.id} value={status.id}>{status.label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(e.target.value as SortMode)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900/55 border border-white/10 text-slate-200 text-sm focus:outline-none focus:border-teal-500/50 [color-scheme:dark]"
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -273,8 +730,8 @@ export default function TeacherDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {STUDENTS.map((stu) => {
-                      const cfg = STATUS_CONFIG[stu.status as Status];
+                    {filteredStudents.map((stu) => {
+                      const cfg = STATUS_CONFIG[stu.status];
                       const pct = progressPct(stu);
                       return (
                         <tr key={stu.id} className="border-b border-white/5 last:border-b-0 hover:bg-white/3 transition-colors">
@@ -322,6 +779,22 @@ export default function TeacherDashboard() {
                         </tr>
                       );
                     })}
+                    {filteredStudents.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-10 px-4 text-center">
+                          <p className="text-slate-400 text-sm font-semibold">Không có học sinh phù hợp</p>
+                          <button
+                            onClick={() => {
+                              setStudentQuery('');
+                              setStatusFilter('all');
+                            }}
+                            className="mt-3 px-4 py-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-semibold hover:bg-teal-500/20 transition-all"
+                          >
+                            Xoá bộ lọc
+                          </button>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -336,27 +809,115 @@ export default function TeacherDashboard() {
                 Giao nhiệm vụ
               </h3>
 
-              {/* Task select */}
-              <div className="space-y-1.5">
-                <label className="text-slate-400 text-xs font-medium">Chọn nhiệm vụ (Bài giảng / Mô phỏng)</label>
-                <div className="relative">
-                  <select
-                    id="assign-task"
-                    value={selectedTask}
-                    onChange={(e) => setSelectedTask(e.target.value)}
-                    className="w-full bg-slate-700/50 border border-white/10 text-white text-sm px-3 py-2.5 rounded-xl appearance-none focus:outline-none focus:border-teal-500/50 cursor-pointer"
-                  >
-                    <option value="" disabled>-- Chọn nội dung --</option>
-                    {TASK_OPTIONS.map((group, idx) => (
-                      <optgroup key={idx} label={group.label} className="bg-slate-800 text-slate-400 font-bold">
-                        {group.items.map(item => (
-                          <option key={item.id} value={item.id} className="text-white font-normal">{item.label}</option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              {/* Task type */}
+              <div className="space-y-2">
+                <label className="text-slate-400 text-xs font-medium">Loại nhiệm vụ</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {ASSIGNMENT_TYPE_OPTIONS.map((option) => {
+                    const Icon =
+                      option.id === 'simulation' ? Video :
+                      option.id === 'quiz' ? HelpCircle :
+                      option.id === 'lesson' ? BookOpen :
+                      option.id === 'worksheet' ? ClipboardList :
+                      PenLine;
+                    const active = selectedTaskType === option.id;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => changeTaskType(option.id)}
+                        className={`min-h-[70px] rounded-xl border p-3 text-left transition-all ${
+                          active
+                            ? 'border-teal-500/45 bg-teal-500/15 text-teal-200'
+                            : 'border-white/10 bg-slate-900/45 text-slate-400 hover:border-white/20 hover:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-sm font-bold">
+                          <Icon size={15} />
+                          {option.label}
+                        </div>
+                        <p className="mt-1 text-[11px] leading-snug text-slate-500">{option.hint}</p>
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
+
+              {/* Task select / custom prompt */}
+              {(selectedTaskType === 'simulation' || selectedTaskType === 'lesson' || selectedTaskType === 'quiz') ? (
+                <div className="space-y-1.5">
+                  <label className="text-slate-400 text-xs font-medium">
+                    Chọn {currentTaskType?.label.toLowerCase()}
+                  </label>
+                  {contentOptions.length === 0 ? (
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 space-y-2">
+                      <p className="text-amber-200 text-xs">
+                        {selectedTaskType === 'quiz'
+                          ? 'Chưa có quiz đã lưu. Hãy tạo quiz trước rồi quay lại giao cho lớp.'
+                          : 'Chưa có bài giảng đã lưu. Hãy tạo bài giảng trước rồi quay lại giao cho lớp.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(selectedTaskType === 'quiz' ? '/quiz/create' : '/lesson-builder')}
+                        className="px-3 py-1.5 rounded-lg bg-amber-500/20 text-amber-100 border border-amber-400/25 text-xs font-bold hover:bg-amber-500/30 transition-colors"
+                      >
+                        {selectedTaskType === 'quiz' ? 'Tạo quiz' : 'Tạo bài giảng'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        id="assign-task"
+                        value={selectedTask}
+                        onChange={(e) => setSelectedTask(e.target.value)}
+                        className="w-full bg-slate-700/50 border border-white/10 text-white text-sm px-3 py-2.5 rounded-xl appearance-none focus:outline-none focus:border-teal-500/50 cursor-pointer"
+                      >
+                        <option value="" disabled>-- Chọn nội dung --</option>
+                        {contentOptions.map(item => (
+                          <option key={item.id} value={item.id} className="text-white font-normal bg-slate-800">{item.label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-slate-400 text-xs font-medium">Tên nhiệm vụ</label>
+                    <input
+                      value={customTaskTitle}
+                      onChange={(e) => setCustomTaskTitle(e.target.value)}
+                      placeholder={selectedTaskType === 'worksheet' ? 'Ví dụ: Phiếu học tập khí áp và gió' : 'Ví dụ: Tự luận về biến đổi khí hậu'}
+                      className="w-full bg-slate-700/50 border border-white/10 text-white text-sm px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500/50 placeholder-slate-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-slate-400 text-xs font-medium">Yêu cầu cho học sinh</label>
+                    <textarea
+                      value={customTaskDescription}
+                      onChange={(e) => setCustomTaskDescription(e.target.value)}
+                      placeholder={selectedTaskType === 'worksheet'
+                        ? 'Nhập câu hỏi hoặc yêu cầu theo từng dòng...'
+                        : 'Nhập đề bài, tiêu chí nội dung, độ dài bài viết...'}
+                      rows={5}
+                      className="w-full bg-slate-700/50 border border-white/10 text-white text-sm px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500/50 placeholder-slate-500 resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-slate-400 text-xs font-medium">Điểm thưởng / điểm quy đổi</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={taskPoints}
+                  onChange={(e) => setTaskPoints(Number(e.target.value) || 0)}
+                  className="w-full bg-slate-700/50 border border-white/10 text-white text-sm px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500/50"
+                />
               </div>
 
               {/* Class select */}
@@ -366,18 +927,32 @@ export default function TeacherDashboard() {
                   <select
                     id="assign-class"
                     value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
+                    onChange={(e) => setSelectedClass(e.target.value as ClassName)}
                     className="w-full bg-slate-700/50 border border-white/10 text-white text-sm px-3 py-2.5 rounded-xl appearance-none focus:outline-none focus:border-teal-500/50 cursor-pointer"
                   >
-                    {CLASS_OPTIONS.map((c) => (
+                    {classOptions.map((c) => (
                       <option key={c} value={c} className="bg-slate-800">Lớp {c}</option>
                     ))}
                   </select>
                   <div className="flex items-center gap-3 mt-4">
-                    <button className="px-4 py-2 bg-slate-800 rounded-xl text-slate-300 font-semibold text-sm hover:bg-slate-700 transition-colors">
+                    <button
+                      onClick={() => {
+                        const className = window.prompt('Nhập tên lớp mới');
+                        const cleaned = className?.trim();
+                        if (!cleaned) return;
+                        setClassOptions((current) => persistClassOptions([...current, cleaned]));
+                        setActiveTab(cleaned);
+                        setSelectedClass(cleaned);
+                        toast.success(`Đã thêm lớp ${cleaned}.`);
+                      }}
+                      className="px-4 py-2 bg-slate-800 rounded-xl text-slate-300 font-semibold text-sm hover:bg-slate-700 transition-colors"
+                    >
                       Thêm Lớp Mới
                     </button>
-                    <button className="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl font-semibold text-sm hover:bg-emerald-500/20 transition-colors flex items-center gap-2">
+                    <button
+                      onClick={() => navigate('/reports')}
+                      className="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl font-semibold text-sm hover:bg-emerald-500/20 transition-colors flex items-center gap-2"
+                    >
                       <CalendarClock size={16} /> TKB & Nhiệm vụ
                     </button>
                   </div>
@@ -437,8 +1012,8 @@ export default function TeacherDashboard() {
               {
                 icon: '🙋',
                 title: 'Học sinh cần hỗ trợ',
-                value: 'Bùi Quốc Cường',
-                sub: 'Trương Thị Hoa',
+                value: attentionStudents[0]?.name ?? 'Không có',
+                sub: attentionStudents[1]?.name ?? 'Lớp đang ổn định',
                 color: 'border-amber-500/20 bg-amber-500/5',
                 pill: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
               },

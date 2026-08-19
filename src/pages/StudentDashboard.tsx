@@ -1,5 +1,6 @@
 // ─── StudentDashboard — Trang tổng quan học sinh ──────────────────────────────
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Flame,
   Zap,
@@ -12,11 +13,16 @@ import {
   Award,
   BookOpen,
   Video,
+  Clock,
+  Target,
+  FileQuestion,
+  ClipboardList,
+  PenLine,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppContext, xpToLevel, levelName } from '../contexts/AppContext';
 import AppLayout from '../layouts/AppLayout';
-import { useAssignmentStore } from '../store/assignmentStore';
+import { inferAssignmentType, type AssignmentTaskType, useAssignmentStore } from '../store/assignmentStore';
 import { useSubmissionStore } from '../store/submissionStore';
 import { SIMULATIONS } from '../data/simulations';
 
@@ -53,6 +59,25 @@ const RECENT_SIMS = [
 ];
 
 const RANK_MEDALS: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+type TaskFilter = 'all' | AssignmentTaskType | 'dueSoon';
+
+const TASK_FILTERS: Array<{ id: TaskFilter; label: string }> = [
+  { id: 'all', label: 'Tất cả' },
+  { id: 'lesson', label: 'Bài giảng' },
+  { id: 'simulation', label: 'Mô phỏng' },
+  { id: 'quiz', label: 'Quiz' },
+  { id: 'worksheet', label: 'Phiếu học tập' },
+  { id: 'essay', label: 'Tự luận' },
+  { id: 'dueSoon', label: 'Sắp hết hạn' },
+];
+
+const TASK_TYPE_LABELS: Record<AssignmentTaskType, string> = {
+  simulation: 'Mô phỏng',
+  lesson: 'Bài giảng',
+  quiz: 'Quiz',
+  worksheet: 'Phiếu học tập',
+  essay: 'Tự luận',
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function xpForLevel(lvl: number): number {
@@ -65,11 +90,13 @@ function xpForNextLevel(lvl: number): number {
 }
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { xp: ctxXP, badges: ctxBadges, simProgress } = useAppContext();
   const { assignments, fetchStudentTasks, loading } = useAssignmentStore();
   const { startAssignment } = useSubmissionStore();
   const [dateStr, setDateStr] = useState('');
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>('all');
 
   useEffect(() => {
     const d = new Date();
@@ -86,6 +113,63 @@ export default function StudentDashboard() {
   const xpMax        = xpForNextLevel(currentLevel);
   const xpPct        = Math.min(100, Math.round(((currentXP - xpMin) / (xpMax - xpMin)) * 100));
   const simsViewedCount = Object.values(simProgress).filter((p) => p.viewed).length;
+  const taskCards = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    return assignments.map((task) => {
+      const taskType = inferAssignmentType(task);
+      const sim = SIMULATIONS.find(s => s.id === task.simulation_id);
+      const title =
+        task.title ||
+        (taskType === 'lesson' ? task.lesson?.title :
+        taskType === 'simulation' ? sim?.name :
+        taskType === 'quiz' ? 'Quiz GeoHub' :
+        taskType === 'essay' ? 'Bài tự luận' :
+        'Phiếu học tập');
+      const dest =
+        taskType === 'lesson' ? `/lesson-viewer/${task.lesson_id}?assignment=${task.id}` :
+        taskType === 'simulation' ? `/simulations/${task.simulation_id}?assignment=${task.id}` :
+        taskType === 'quiz' ? `/quiz/${task.quiz_id}?assignment=${task.id}` :
+        `/tasks/${task.id}`;
+      const deadline = new Date(task.deadline);
+      const daysLeft = Math.ceil((deadline.getTime() - startOfToday.getTime()) / 86400000);
+      const statusLabel = daysLeft < 0 ? 'Quá hạn' : daysLeft === 0 ? 'Hôm nay' : `Còn ${daysLeft} ngày`;
+      const statusClass = daysLeft < 0
+        ? 'bg-red-500/10 text-red-300 border-red-500/25'
+        : daysLeft <= 2
+          ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+          : 'bg-teal-500/10 text-teal-300 border-teal-500/25';
+
+      return {
+        task,
+        taskType,
+        title: `${TASK_TYPE_LABELS[taskType]}: ${title}`,
+        dest,
+        daysLeft,
+        statusLabel,
+        statusClass,
+        xp: task.points ?? (taskType === 'quiz' || taskType === 'essay' ? 100 : taskType === 'worksheet' ? 70 : taskType === 'lesson' ? 50 : 30),
+      };
+    }).sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [assignments]);
+
+  const filteredTaskCards = taskCards.filter((card) => {
+    if (taskFilter !== 'all' && taskFilter !== 'dueSoon') return card.taskType === taskFilter;
+    if (taskFilter === 'dueSoon') return card.daysLeft >= 0 && card.daysLeft <= 2;
+    return true;
+  });
+  const dueSoonCount = taskCards.filter(card => card.daysLeft >= 0 && card.daysLeft <= 2).length;
+  const overdueCount = taskCards.filter(card => card.daysLeft < 0).length;
+  const nextTask = taskCards.find(card => card.daysLeft >= 0) ?? taskCards[0];
+  const taskHealthPct = taskCards.length
+    ? Math.round(((taskCards.length - overdueCount) / taskCards.length) * 100)
+    : 100;
+
+  const openTask = (card: typeof taskCards[number]) => {
+    startAssignment(card.task.id, '10A1');
+    navigate(card.dest);
+  };
 
   return (
     <AppLayout title="Tổng quan học sinh">
@@ -131,7 +215,7 @@ export default function StudentDashboard() {
           {[
             { label: 'Chuỗi học tập', value: '3 ngày', sub: 'liên tiếp', icon: <Flame className="text-orange-400" size={22} />, grad: 'from-orange-500/40 to-red-500/0', border: 'border-orange-500/20' },
             { label: 'Tổng XP', value: currentXP.toLocaleString(), sub: 'điểm kinh nghiệm', icon: <Zap className="text-yellow-400" size={22} />, grad: 'from-yellow-500/40 to-amber-500/0', border: 'border-yellow-500/20' },
-            { label: 'Mô phỏng đã xem', value: simsViewedCount.toString(), sub: 'mô phỏng', icon: <Play className="text-teal-400" size={22} />, grad: 'from-teal-500/40 to-cyan-500/0', border: 'border-teal-500/20' },
+            { label: 'Nhiệm vụ sắp hạn', value: dueSoonCount.toString(), sub: overdueCount > 0 ? `${overdueCount} quá hạn` : 'cần ưu tiên', icon: <Clock className="text-teal-400" size={22} />, grad: 'from-teal-500/40 to-cyan-500/0', border: 'border-teal-500/20' },
             { label: 'Huy hiệu', value: userBadges.length.toString(), sub: `/ ${ALL_BADGES.length} huy hiệu`, icon: <Star className="text-violet-400" size={22} />, grad: 'from-violet-500/40 to-purple-500/0', border: 'border-violet-500/20' },
           ].map((s) => (
             <div key={s.label} className={`relative rounded-2xl border ${s.border} bg-slate-800/60 p-4 hover:scale-[1.02] transition-transform duration-200 isolate`}>
@@ -144,6 +228,45 @@ export default function StudentDashboard() {
               <p className="text-slate-500 text-xs mt-0.5">{s.sub}</p>
             </div>
           ))}
+        </div>
+
+        {/* Today focus */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 rounded-2xl border border-white/10 bg-slate-800/60 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Target size={18} className="text-teal-400" />
+              <h3 className="text-white font-semibold">Việc học ưu tiên</h3>
+            </div>
+            {nextTask ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1">
+                  <p className="text-slate-300 text-sm font-medium">{nextTask.title}</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className={`text-xs px-2 py-1 rounded-full border ${nextTask.statusClass}`}>{nextTask.statusLabel}</span>
+                    <span className="text-xs px-2 py-1 rounded-full border border-yellow-500/20 bg-yellow-500/10 text-yellow-300">+{nextTask.xp} XP</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => openTask(nextTask)}
+                  className="px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-white text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  Bắt đầu <ChevronRight size={14} />
+                </button>
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">Chưa có nhiệm vụ mới. Bạn có thể ôn lại mô phỏng gần đây.</p>
+            )}
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-slate-800/60 p-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-slate-400 text-xs font-semibold">Tình trạng nhiệm vụ</span>
+              <span className="text-teal-300 text-sm font-bold">{taskHealthPct}%</span>
+            </div>
+            <div className="h-2.5 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full" style={{ width: `${taskHealthPct}%` }} />
+            </div>
+            <p className="text-slate-500 text-xs mt-3">{taskCards.length} nhiệm vụ đang theo dõi · {simsViewedCount} mô phỏng đã xem</p>
+          </div>
         </div>
 
         {/* 3+4. Tasks + Badges */}
@@ -160,55 +283,72 @@ export default function StudentDashboard() {
                 {assignments.length} nhiệm vụ
               </span>
             </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {TASK_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  onClick={() => setTaskFilter(filter.id)}
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap transition-all ${
+                    taskFilter === filter.id
+                      ? 'bg-teal-500/20 text-teal-300 border-teal-500/35'
+                      : 'bg-slate-800/60 text-slate-500 border-white/8 hover:text-slate-300'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
             
             <div className="space-y-3">
               {loading ? (
                 <p className="text-slate-400 text-sm py-4 text-center">Đang tải nhiệm vụ...</p>
-              ) : assignments.length === 0 ? (
+              ) : filteredTaskCards.length === 0 ? (
                 <p className="text-slate-400 text-sm py-4 text-center border border-white/5 bg-slate-800/30 rounded-2xl p-4">
-                  Chưa có nhiệm vụ nào được giao.
+                  Chưa có nhiệm vụ phù hợp với bộ lọc này.
                 </p>
               ) : (
-                assignments.map((task) => {
-                  const isLesson = !!task.lesson_id;
-                  const title = isLesson
-                    ? `Bài giảng: ${task.lesson?.title || 'Bài giảng'}`
-                    : `Mô phỏng: ${SIMULATIONS.find(s => s.id === task.simulation_id)?.name || 'Mô phỏng 3D'}`;
-                  const dest = isLesson
-                    ? `/lesson-viewer/${task.lesson_id}?assignment=${task.id}`
-                    : `/simulations/${task.simulation_id}?assignment=${task.id}`;
+                filteredTaskCards.map((card) => {
+                  const Icon =
+                    card.taskType === 'lesson' ? BookOpen :
+                    card.taskType === 'quiz' ? FileQuestion :
+                    card.taskType === 'worksheet' ? ClipboardList :
+                    card.taskType === 'essay' ? PenLine :
+                    Video;
+                  const accent =
+                    card.taskType === 'lesson' ? { bg: 'rgba(139,92,246,0.2)', color: '#a78bfa' } :
+                    card.taskType === 'quiz' ? { bg: 'rgba(59,130,246,0.2)', color: '#60a5fa' } :
+                    card.taskType === 'worksheet' ? { bg: 'rgba(245,158,11,0.18)', color: '#fbbf24' } :
+                    card.taskType === 'essay' ? { bg: 'rgba(244,63,94,0.18)', color: '#fb7185' } :
+                    { bg: 'rgba(20,184,166,0.2)', color: '#2dd4bf' };
 
                   return (
-                    <div key={task.id} style={{ position: 'relative', zIndex: 20 }} className="rounded-2xl border border-white/10 bg-slate-800/70 p-4 sm:p-5">
+                    <div key={card.task.id} style={{ position: 'relative', zIndex: 20 }} className="rounded-2xl border border-white/10 bg-slate-800/70 p-4 sm:p-5">
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
                         <div style={{
                           width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isLesson ? 'rgba(139,92,246,0.2)' : 'rgba(20,184,166,0.2)',
-                          color: isLesson ? '#a78bfa' : '#2dd4bf',
+                          background: accent.bg,
+                          color: accent.color,
                         }}>
-                          {isLesson ? <BookOpen size={18} /> : <Video size={18} />}
+                          <Icon size={18} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ color: 'white', fontWeight: 500, fontSize: '14px', marginBottom: '6px' }}>{title}</p>
+                          <p style={{ color: 'white', fontWeight: 500, fontSize: '14px', marginBottom: '6px' }}>{card.title}</p>
                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)' }}>
-                              📅 Hạn: {new Date(task.deadline).toLocaleDateString('vi-VN')}
+                              📅 Hạn: {new Date(card.task.deadline).toLocaleDateString('vi-VN')}
+                            </span>
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full border ${card.statusClass}`}>
+                              {card.statusLabel}
                             </span>
                             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(234,179,8,0.1)', color: '#fde047', border: '1px solid rgba(234,179,8,0.2)' }}>
-                              +{isLesson ? 100 : 30} XP
+                              +{card.xp} XP
                             </span>
                           </div>
                         </div>
-                        <a
-                          href={dest}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            startAssignment(task.id, '10A1');
-                            window.open(dest, '_self');
-                          }}
+                        <button
+                          onClick={() => openTask(card)}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '4px',
                             padding: '6px 14px', borderRadius: '8px',
@@ -221,7 +361,7 @@ export default function StudentDashboard() {
                           }}
                         >
                           Bắt đầu <ChevronRight size={12} />
-                        </a>
+                        </button>
                       </div>
                     </div>
                   );

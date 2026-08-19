@@ -54,7 +54,7 @@ export const seedMockData = () => {
   }
 
   if (!authStore.user) {
-    authStore.login({
+    authStore.setUser({
       id: 'teacher-1',
       name: 'Nguyễn Thị Hoài Thu',
       email: 'hoaithu@geohub.edu.vn',

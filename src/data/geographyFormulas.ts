@@ -4,6 +4,7 @@ export interface GeoFormula {
   formula: string;
   unit: string;
   description?: string;
+  inputs?: { key: string; name: string }[];
 }
 
 export const GEOGRAPHY_FORMULAS: GeoFormula[] = [
@@ -14,6 +15,8 @@ export const GEOGRAPHY_FORMULAS: GeoFormula[] = [
   { id: 'binh_quan_luong_thuc', name: 'Bình quân lương thực theo đầu người', formula: 'Sản lượng lương thực / Dân số', unit: 'kg/người' },
   { id: 'gdp_binh_quan', name: 'GDP bình quân đầu người', formula: 'Tổng GDP / Dân số', unit: 'USD/người' },
   { id: 'ti_trong', name: 'Tỉ trọng', formula: 'Giá trị thành phần / Tổng giá trị × 100', unit: '%' },
+  { id: 'ti_le_phan_tram', name: 'Tỉ lệ phần trăm', formula: 'Giá trị thành phần / Tổng giá trị × 100', unit: '%' },
+  { id: 'ti_le_dien_tich', name: 'Tỉ lệ diện tích', formula: 'Diện tích thành phần / Tổng diện tích × 100', unit: '%' },
   { id: 'toc_do_tang_truong', name: 'Tốc độ tăng trưởng', formula: 'Giá trị năm sau / Giá trị năm gốc × 100', unit: '%' },
   { id: 'muc_tang', name: 'Mức tăng', formula: 'Giá trị năm sau - Giá trị năm trước', unit: 'tuỳ bài' },
   { id: 'can_can_xnk', name: 'Cán cân xuất nhập khẩu', formula: 'Xuất khẩu - Nhập khẩu', unit: 'triệu USD' },
@@ -24,7 +27,35 @@ export const GEOGRAPHY_FORMULAS: GeoFormula[] = [
   { id: 'luong_mua_nam', name: 'Lượng mưa năm', formula: 'Tổng lượng mưa 12 tháng', unit: 'mm' },
   { id: 'ti_le_dan_thanh_thi', name: 'Tỉ lệ dân thành thị', formula: 'Dân thành thị / Tổng dân số × 100', unit: '%' },
   { id: 'ti_le_dan_nong_thon', name: 'Tỉ lệ dân nông thôn', formula: 'Dân nông thôn / Tổng dân số × 100', unit: '%' },
+  { id: 'so_dan_thanh_thi', name: 'Số dân thành thị', formula: 'Tổng dân số × Tỉ lệ dân thành thị / 100', unit: 'triệu người' },
+  { id: 'so_dan_nong_thon', name: 'Số dân nông thôn', formula: 'Tổng dân số × Tỉ lệ dân nông thôn / 100', unit: 'triệu người' },
+  { id: 'ti_so_gioi_tinh', name: 'Tỉ số giới tính', formula: 'Số nam / Số nữ × 100', unit: 'nam/100 nữ' },
+  { id: 'ti_le_nam', name: 'Tỉ lệ nam', formula: 'Số nam / Tổng dân số × 100', unit: '%' },
+  { id: 'ti_le_nu', name: 'Tỉ lệ nữ', formula: 'Số nữ / Tổng dân số × 100', unit: '%' },
+  { id: 'ti_suat_sinh_tho', name: 'Tỉ suất sinh thô', formula: 'Số trẻ sinh ra / Dân số trung bình × 1000', unit: '‰' },
+  { id: 'ti_suat_tu_tho', name: 'Tỉ suất tử thô', formula: 'Số người chết / Dân số trung bình × 1000', unit: '‰' },
+  { id: 'ti_suat_nhap_cu', name: 'Tỉ suất nhập cư', formula: 'Số người nhập cư / Dân số trung bình × 1000', unit: '‰' },
+  { id: 'ti_suat_xuat_cu', name: 'Tỉ suất xuất cư', formula: 'Số người xuất cư / Dân số trung bình × 1000', unit: '‰' },
+  { id: 'gia_tang_co_hoc', name: 'Tỉ suất gia tăng cơ học', formula: 'Tỉ suất nhập cư - Tỉ suất xuất cư', unit: '‰' },
+  { id: 'tang_dan_so_tuyet_doi', name: 'Số dân tăng thêm', formula: 'Dân số năm sau - Dân số năm trước', unit: 'triệu người' },
+  { id: 'ti_le_tang_dan_so', name: 'Tỉ lệ tăng dân số', formula: '(Dân số năm sau - Dân số năm trước) / Dân số năm trước × 100', unit: '%' },
   { id: 'co_cau_kinh_te', name: 'Cơ cấu ngành kinh tế', formula: 'Giá trị ngành / Tổng giá trị × 100', unit: '%' },
+  { id: 'gia_tri_thanh_phan', name: 'Giá trị của thành phần', formula: 'Tổng giá trị × Tỉ trọng / 100', unit: 'tỉ đồng' },
   { id: 'cu_li_van_chuyen', name: 'Cự li vận chuyển trung bình', formula: 'Khối lượng luân chuyển / Khối lượng vận chuyển', unit: 'km' },
   { id: 'toc_do_tang_dan_so', name: 'Tốc độ tăng dân số', formula: 'Dân số năm sau / Dân số năm gốc × 100', unit: '%' },
+  { id: 'doi_hai_li_sang_km', name: 'Đổi hải lí sang ki-lô-mét', formula: 'Số hải lí × 1,852', unit: 'km' },
+  { id: 'chieu_rong_vung_bien_km', name: 'Chiều rộng bộ phận vùng biển', formula: 'Số hải lí × 1,852', unit: 'km' },
+  { id: 'khoang_cach_thuc_te_tu_ti_le_ban_do', name: 'Khoảng cách thực tế theo tỉ lệ bản đồ', formula: 'Khoảng cách trên bản đồ × mẫu số tỉ lệ / 100 000', unit: 'km' },
+  { id: 'khoang_cach_ban_do_tu_ti_le', name: 'Khoảng cách trên bản đồ theo tỉ lệ', formula: 'Khoảng cách thực tế × 100 000 / mẫu số tỉ lệ', unit: 'cm' },
+  { id: 'chenh_lech_toa_do', name: 'Chênh lệch tọa độ', formula: 'Tọa độ lớn nhất - Tọa độ nhỏ nhất', unit: 'độ' },
+  { id: 'chenh_lech_mui_gio', name: 'Chênh lệch múi giờ', formula: 'Chênh lệch kinh độ / 15', unit: 'giờ' },
+  { id: 'nhiet_do_theo_do_cao', name: 'Nhiệt độ theo độ cao', formula: 'Nhiệt độ chân núi - (Độ cao chênh lệch / 100 × 0,6)', unit: '°C' },
+  { id: 'do_cao_day_nui', name: 'Độ cao dãy núi theo nhiệt độ', formula: 'Chênh lệch nhiệt độ / 0,6 × 100', unit: 'm' },
+  { id: 'chenh_lech_nhiet_do_suon_nui', name: 'Chênh lệch nhiệt độ hai sườn núi', formula: '|Nhiệt độ sườn đón gió - Nhiệt độ sườn khuất gió|', unit: '°C' },
+  { id: 'nhiet_do_suon_don_gio', name: 'Nhiệt độ sườn đón gió', formula: 'Nhiệt độ chân núi - Độ cao / 100 × 0,6', unit: '°C' },
+  { id: 'nhiet_do_suon_khuat_gio', name: 'Nhiệt độ sườn khuất gió', formula: 'Nhiệt độ đỉnh núi + Độ cao hạ xuống / 100 × 1,0', unit: '°C' },
+  { id: 'tong_luong_nuoc_mua_lu', name: 'Tổng lượng nước mùa lũ', formula: 'Tổng lưu lượng các tháng mùa lũ', unit: 'm³/s' },
+  { id: 'tong_luong_nuoc_mua_can', name: 'Tổng lượng nước mùa cạn', formula: 'Tổng lưu lượng các tháng mùa cạn', unit: 'm³/s' },
+  { id: 'ti_le_luong_nuoc_mua_lu', name: 'Tỉ lệ lượng nước mùa lũ', formula: 'Tổng lượng nước mùa lũ / Tổng lượng nước năm × 100', unit: '%' },
+  { id: 'ti_le_luong_nuoc_mua_can', name: 'Tỉ lệ lượng nước mùa cạn', formula: 'Tổng lượng nước mùa cạn / Tổng lượng nước năm × 100', unit: '%' },
 ];

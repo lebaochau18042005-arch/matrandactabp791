@@ -1,7 +1,7 @@
 // ─── SimLibraryPage – Thư viện mô phỏng 3D GeoHub LMS ────────────────────────
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Play, Clock, BookOpen, Star } from 'lucide-react';
+import { Search, Filter, Play, Clock, BookOpen, Star, SortAsc } from 'lucide-react';
 import { SIMULATIONS, SIM_GROUPS, SimGroup } from '../data/simulations';
 import AppLayout from '../layouts/AppLayout';
 import confetti from 'canvas-confetti';
@@ -10,6 +10,7 @@ import confetti from 'canvas-confetti';
 type StatusFilter     = 'all' | 'live' | 'coming';
 type GradeFilter      = 'all' | 10 | 11 | 12;
 type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
+type SortMode         = 'recommended' | 'duration' | 'difficulty' | 'name';
 
 const GROUP_TABS: Array<{ id: 'all' | SimGroup; label: string; emoji: string }> = [
   { id: 'all',        label: 'Tất cả',       emoji: '🌐' },
@@ -26,10 +27,22 @@ const DIFF_LABELS: Record<string, { label: string; color: string }> = {
   hard:   { label: 'Khó', color: 'text-red-400     bg-red-500/15     border-red-500/30'      },
 };
 
+const SORT_OPTIONS: Array<{ id: SortMode; label: string }> = [
+  { id: 'recommended', label: 'Đề xuất' },
+  { id: 'duration', label: 'Thời lượng ngắn' },
+  { id: 'difficulty', label: 'Dễ đến khó' },
+  { id: 'name', label: 'Tên A-Z' },
+];
+
+const normalizeSearch = (value: string) =>
+  value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+
 // ─── Simulation Card ──────────────────────────────────────────────────────────
-function SimCard({ sim, onAction }: {
+function SimCard({ sim, onAction, isFavorite, onToggleFavorite }: {
   sim: typeof SIMULATIONS[number];
   onAction: (sim: typeof SIMULATIONS[number]) => void;
+  isFavorite: boolean;
+  onToggleFavorite: (id: string) => void;
 }) {
   const diff  = DIFF_LABELS[sim.difficulty];
   const isLive = sim.status === 'live';
@@ -64,6 +77,22 @@ function SimCard({ sim, onAction }: {
           </span>
         </div>
 
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleFavorite(sim.id);
+          }}
+          aria-label={isFavorite ? `Bỏ yêu thích ${sim.name}` : `Yêu thích ${sim.name}`}
+          className={`absolute bottom-2.5 right-2.5 w-9 h-9 rounded-full border backdrop-blur flex items-center justify-center transition-all ${
+            isFavorite
+              ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg shadow-amber-500/30'
+              : 'bg-slate-950/45 text-white/80 border-white/15 hover:bg-slate-950/70 hover:text-amber-300'
+          }`}
+        >
+          <Star size={16} fill={isFavorite ? 'currentColor' : 'none'} />
+        </button>
+
         {/* Dim overlay on hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300" />
       </div>
@@ -84,6 +113,12 @@ function SimCard({ sim, onAction }: {
               Lớp {g}
             </span>
           ))}
+          {sim.lessonRef && (
+            <div className="flex items-center gap-1 text-slate-500">
+              <BookOpen size={11} />
+              <span className="text-xs">{sim.lessonRef}</span>
+            </div>
+          )}
           <div className="flex items-center gap-1 ml-auto text-slate-500">
             <Clock size={11} />
             <span className="text-xs">{sim.durationMin} phút</span>
@@ -138,6 +173,19 @@ export default function SimLibraryPage() {
   const [activeStatus,    setActiveStatus]    = useState<StatusFilter>('all');
   const [activeGrade,     setActiveGrade]     = useState<GradeFilter>('all');
   const [activeDifficulty,setActiveDifficulty]= useState<DifficultyFilter>('all');
+  const [sortMode,        setSortMode]        = useState<SortMode>('recommended');
+  const [favoritesOnly,   setFavoritesOnly]   = useState(false);
+  const [favoriteIds,     setFavoriteIds]     = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('geohub_favorite_sims');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
 
   // ── Confetti effect when all unlocked ───────────────────────────────────────
   React.useEffect(() => {
@@ -174,18 +222,42 @@ export default function SimLibraryPage() {
     }
   }, []);
 
+  React.useEffect(() => {
+    localStorage.setItem('geohub_favorite_sims', JSON.stringify(favoriteIds));
+  }, [favoriteIds]);
+
+  const toggleFavorite = (id: string) => {
+    setFavoriteIds((current) =>
+      current.includes(id) ? current.filter((favoriteId) => favoriteId !== id) : [...current, id]
+    );
+  };
+
   // ── Filter logic ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
+    const q = normalizeSearch(query.trim());
+    const difficultyRank = { easy: 1, medium: 2, hard: 3 };
+
     return SIMULATIONS.filter(sim => {
-      if (q && !sim.name.toLowerCase().includes(q) && !sim.keywords.some(k => k.includes(q))) return false;
+      const searchText = normalizeSearch(`${sim.name} ${sim.description} ${sim.lessonRef ?? ''} ${sim.keywords.join(' ')}`);
+      if (q && !searchText.includes(q)) return false;
+      if (favoritesOnly && !favoriteSet.has(sim.id)) return false;
       if (activeGroup  !== 'all' && sim.group !== activeGroup)     return false;
       if (activeStatus !== 'all' && sim.status !== activeStatus)   return false;
       if (activeGrade  !== 'all' && !sim.grades.includes(activeGrade as number)) return false;
       if (activeDifficulty !== 'all' && sim.difficulty !== activeDifficulty) return false;
       return true;
+    }).sort((a, b) => {
+      if (sortMode === 'duration') return a.durationMin - b.durationMin || a.name.localeCompare(b.name, 'vi');
+      if (sortMode === 'difficulty') return difficultyRank[a.difficulty] - difficultyRank[b.difficulty] || a.name.localeCompare(b.name, 'vi');
+      if (sortMode === 'name') return a.name.localeCompare(b.name, 'vi');
+
+      const favoriteDelta = Number(favoriteSet.has(b.id)) - Number(favoriteSet.has(a.id));
+      if (favoriteDelta) return favoriteDelta;
+
+      const statusDelta = Number(b.status === 'live') - Number(a.status === 'live');
+      return statusDelta || a.name.localeCompare(b.name, 'vi');
     });
-  }, [query, activeGroup, activeStatus, activeGrade, activeDifficulty]);
+  }, [query, favoritesOnly, favoriteSet, activeGroup, activeStatus, activeGrade, activeDifficulty, sortMode]);
 
   // ── Group filtered results ──────────────────────────────────────────────────
   const grouped = useMemo(() => {
@@ -212,6 +284,7 @@ export default function SimLibraryPage() {
 
   const liveCount   = SIMULATIONS.filter(s => s.status === 'live').length;
   const comingCount = SIMULATIONS.filter(s => s.status === 'coming').length;
+  const favoriteCount = favoriteIds.length;
 
   return (
     <AppLayout title="🎨 Thư viện Mô phỏng 3D">
@@ -231,6 +304,12 @@ export default function SimLibraryPage() {
                 <span className="text-orange-400 font-semibold">{comingCount} sắp ra mắt</span>
             ) : (
                 <span className="text-pink-400 font-bold tracking-wider animate-pulse">🎉 100% HOÀN TẤT</span>
+            )}
+            {favoriteCount > 0 && (
+              <>
+                <span className="mx-1 text-slate-600">·</span>
+                <span className="text-amber-300 font-semibold">{favoriteCount} đã ghim</span>
+              </>
             )}
           </p>
 
@@ -331,6 +410,33 @@ export default function SimLibraryPage() {
               </button>
             ))}
 
+            <div className="w-px h-5 bg-white/10" />
+
+            <button
+              onClick={() => setFavoritesOnly(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                favoritesOnly
+                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/35'
+                  : 'bg-slate-800/40 text-slate-500 border-white/6 hover:text-amber-300'
+              }`}
+            >
+              <Star size={12} fill={favoritesOnly ? 'currentColor' : 'none'} />
+              Đã ghim
+            </button>
+
+            <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-white/6 text-slate-500 text-xs font-semibold">
+              <SortAsc size={12} />
+              <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value as SortMode)}
+                className="bg-transparent text-slate-300 focus:outline-none [color-scheme:dark]"
+              >
+                {SORT_OPTIONS.map(option => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+
             {/* Result count */}
             <div className="ml-auto text-slate-500 text-xs">
               {filtered.length} kết quả
@@ -345,7 +451,15 @@ export default function SimLibraryPage() {
             <p className="text-slate-400 font-semibold">Không tìm thấy mô phỏng nào</p>
             <p className="text-slate-600 text-sm mt-1">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
             <button
-              onClick={() => { setQuery(''); setActiveGroup('all'); setActiveStatus('all'); setActiveGrade('all'); setActiveDifficulty('all'); }}
+              onClick={() => {
+                setQuery('');
+                setActiveGroup('all');
+                setActiveStatus('all');
+                setActiveGrade('all');
+                setActiveDifficulty('all');
+                setFavoritesOnly(false);
+                setSortMode('recommended');
+              }}
               className="mt-4 px-5 py-2 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-300 text-sm font-semibold hover:bg-teal-500/20 transition-all"
             >
               Xoá bộ lọc
@@ -358,7 +472,13 @@ export default function SimLibraryPage() {
                 <SectionHeader emoji={emoji} label={label} count={sims.length} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sims.map(sim => (
-                    <SimCard key={sim.id} sim={sim} onAction={handleAction} />
+                    <SimCard
+                      key={sim.id}
+                      sim={sim}
+                      onAction={handleAction}
+                      isFavorite={favoriteSet.has(sim.id)}
+                      onToggleFavorite={toggleFavorite}
+                    />
                   ))}
                 </div>
               </section>

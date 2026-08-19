@@ -19,17 +19,19 @@ export interface SimTab {
 interface SimActivityProps {
   title?: string;
   questions: ActivityQuestion[];
-  visible: boolean;
-  onToggle: () => void;
+  visible?: boolean;
+  onToggle?: () => void;
   themeColor?: string;
+  onComplete?: (score: number) => void;
 }
 
 export const SimActivity: React.FC<SimActivityProps> = ({
   title = 'Điền vào chỗ trống',
   questions,
-  visible,
-  onToggle,
+  visible = true,
+  onToggle = () => {},
   themeColor = '#1e40af',
+  onComplete,
 }) => {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState(false);
@@ -49,6 +51,9 @@ export const SimActivity: React.FC<SimActivityProps> = ({
     });
     setScore({ correct, total: questions.length });
     setChecked(true);
+    if (onComplete) {
+      onComplete(correct);
+    }
   };
 
   const handleReset = () => {

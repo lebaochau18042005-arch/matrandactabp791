@@ -519,7 +519,7 @@ export default function LessonBuilderPage() {
             <button className="lb-btn" style={{ ...styles.topBtn, background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", fontWeight: 600 }} onClick={() => navigate('/quiz/create')}>
               🧠 Tạo Quiz AI
             </button>
-            <button className="lb-btn" style={{ ...styles.topBtn, background: "linear-gradient(135deg, #0d9488, #0891b2)", color: "#fff", fontWeight: 600 }} onClick={handleSave}>
+            <button className="lb-btn" style={{ ...styles.topBtn, background: "linear-gradient(135deg, #0d9488, #0891b2)", color: "#fff", fontWeight: 600 }} onClick={() => handleSave()}>
               💾 Lưu
             </button>
           </div>
