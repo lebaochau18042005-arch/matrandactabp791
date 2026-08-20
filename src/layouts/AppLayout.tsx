@@ -1,7 +1,8 @@
 // ─── AppLayout – Main authenticated layout wrapper ─────────────────────────────
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { useAuth, UserRole } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
+import type { UserRole } from '../store/authStore';
 import { useAppContext, xpToLevel, levelName } from '../contexts/AppContext';
 import {
   Home, BookOpen, Play, Brain, Map, Users, BarChart3, Settings,
@@ -56,7 +57,7 @@ function getNavGroups(role: UserRole): NavGroup[] {
       return [{
         items: [
           { label: 'Trang Chủ',           path: '/',              icon: <Home      size={18} /> },
-          { label: 'Nhiệm Vụ Của Tôi',    path: '/tasks',         icon: <BookOpen  size={18} /> },
+          { label: 'Nhiệm Vụ Của Tôi',    path: '/student',       icon: <BookOpen  size={18} /> },
           { label: 'Thư Viện Mô Phỏng',   path: '/simulations',   icon: <Library   size={18} /> },
           { label: 'Trợ Lí AI',           path: '/ai-assistant',  icon: <Brain     size={18} /> },
           { label: 'Phòng Lab Bản Đồ',    path: '/map-lab',       icon: <Map       size={18} /> },
@@ -97,7 +98,7 @@ function getNavGroups(role: UserRole): NavGroup[] {
       return [{
         items: [
           { label: 'Tổng Quan',           path: '/admin',         icon: <Home      size={18} /> },
-          { label: 'Người Dùng',          path: '/admin/users',   icon: <Users     size={18} /> },
+          { label: 'Người Dùng',          path: '/admin',         icon: <Users     size={18} /> },
           { label: 'Mô Phỏng',           path: '/simulations',   icon: <Globe     size={18} /> },
           { label: 'Báo Cáo',            path: '/reports',       icon: <BarChart3 size={18} /> },
           { label: 'Cài Đặt',            path: '/settings',      icon: <Settings  size={18} /> },
@@ -125,19 +126,15 @@ function xpForLevel(level: number): number {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function AppLayout({ children, title = 'GeoHub' }: AppLayoutProps) {
-  const { user, logout, loginAsDemo } = useAuth();
+  const { user, logout } = useAuth();
   const { xp, level } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
-  // Auto-login as teacher demo if not logged in
-  useEffect(() => {
-    if (!user) loginAsDemo('teacher');
-  }, [user, loginAsDemo]);
 
-  const role: UserRole = user?.role ?? 'teacher';
+  const role: UserRole = user?.role ?? 'guest';
   const navGroups = getNavGroups(role);
 
   // Close sidebar on route change (mobile)
@@ -150,10 +147,9 @@ export default function AppLayout({ children, title = 'GeoHub' }: AppLayoutProps
     ? Math.min(100, Math.round(((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100))
     : 100;
 
-  const handleLogout = () => {
-    logout();
-    loginAsDemo('teacher'); // re-login as demo instead of going to login page
-    navigate('/teacher');
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   // ─── Sidebar inner content ─────────────────────────────────────────────────

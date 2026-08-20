@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { useAuth } from '../contexts/AuthContext';
+import { readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from '../lib/geminiSettings';
 
 // ─── Toggle component ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -46,10 +47,10 @@ export default function SettingsPage() {
   const [name, setName] = useState(user?.name ?? '');
 
   // API Key state
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') ?? '');
+  const [apiKey, setApiKey] = useState(readGeminiApiKey);
   const [showKey, setShowKey] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('gemini_model') || 'gemini-3.5-flash');
+  const [selectedModel, setSelectedModel] = useState(readGeminiModel);
 
   // Appearance
   const [animQuality, setAnimQuality] = useState<'high' | 'medium' | 'low'>('high');
@@ -60,21 +61,22 @@ export default function SettingsPage() {
   const [notifUpdate, setNotifUpdate]       = useState(false);
 
   const handleSaveApiKey = () => {
-    localStorage.setItem('gemini_api_key', apiKey);
-    localStorage.setItem('gemini_model', selectedModel);
+    saveGeminiApiKey(apiKey);
+    saveGeminiModel(selectedModel);
     setKeySaved(true);
     setTimeout(() => setKeySaved(false), 2000);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (window.confirm('Bạn có chắc muốn xóa toàn bộ dữ liệu học tập? Hành động này không thể hoàn tác.')) {
       localStorage.clear();
       alert('Đã xóa dữ liệu học tập. Vui lòng đăng nhập lại.');
+      await logout();
       navigate('/login');
     }
   };

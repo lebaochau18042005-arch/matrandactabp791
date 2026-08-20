@@ -12,6 +12,7 @@ import {
   Clock
 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { readGeminiApiKey } from '../lib/geminiSettings';
 import { GoogleGenAI } from "@google/genai";
 
 interface Question {
@@ -58,7 +59,7 @@ export const MillionaireGame = ({
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const keyToUse = apiKey || process.env.GEMINI_API_KEY || '';
+      const keyToUse = apiKey || readGeminiApiKey();
       if (!keyToUse) {
         throw new Error("Chưa cấu hình API Key. Vui lòng thiết lập API Key trong phần Cấu hình.");
       }
@@ -179,7 +180,7 @@ export const MillionaireGame = ({
     if (!lifelines.phone || isLocked) return;
     setLoading(true);
     try {
-      const keyToUse = apiKey || process.env.GEMINI_API_KEY || '';
+      const keyToUse = apiKey || readGeminiApiKey();
       if (!keyToUse) {
         throw new Error("Chưa cấu hình API Key. Vui lòng thiết lập API Key trong phần Cấu hình.");
       }

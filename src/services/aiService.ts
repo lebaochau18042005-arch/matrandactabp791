@@ -1,4 +1,5 @@
 import { generateGeoAIContent, GeoAIInput, GeoAIOutput } from '../lib/mockGeoAI';
+import { readGeminiApiKey, readGeminiModel } from '../lib/geminiSettings';
 
 /**
  * Service to handle AI content generation.
@@ -40,8 +41,8 @@ NGUYÊN TẮC BẮT BUỘC:
 export const aiService = {
   generateAIContent: async (input: GeoAIInput): Promise<GeoAIOutput> => {
     try {
-      const apiKey = localStorage.getItem('gemini_api_key');
-      const selectedModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash';
+      const apiKey = readGeminiApiKey();
+      const selectedModel = readGeminiModel();
       if (apiKey) {
         let jsonFormatInstruction = `
 Trả về đúng định dạng JSON sau (không thêm bất kỳ văn bản nào bên ngoài JSON):
@@ -404,43 +405,6 @@ Chỉ trả về JSON hợp lệ theo cấu trúc sau (không thêm lời dẫn)
   "postLessonAdjustment": { "strengths": "", "limitations": "", "adjustments": "" },
   "validationWarnings": []
 }`;
-          
-          if (input.blocks) {
-            const getBlockContent = (type: string) => input.blocks?.filter(b => b.type === type).map(b => b.content).join("\n");
-            
-            userPromptTemplate = `
-THÔNG TIN CHUNG:
-- Lớp: ${input.grade}
-- Bài học: ${input.lessonTitle}
-
-MỤC TIÊU:
-${getBlockContent("objective") || "Chưa có"}
-
-HOẠT ĐỘNG KHỞI ĐỘNG:
-${getBlockContent("warmup_activity") || "Chưa có"}
-
-HOẠT ĐỘNG HÌNH THÀNH KIẾN THỨC:
-${getBlockContent("knowledge_activity") || "Chưa có"}
-
-PHIẾU HỌC TẬP:
-${getBlockContent("worksheet") || "Chưa có"}
-
-CÂU HỎI THẢO LUẬN:
-${getBlockContent("discussion_questions") || "Chưa có"}
-
-HOẠT ĐỘNG LUYỆN TẬP:
-${getBlockContent("practice_activity") || "Chưa có"}
-
-HOẠT ĐỘNG VẬN DỤNG:
-${getBlockContent("application_activity") || "Chưa có"}
-
-CÔNG CỤ ĐÁNH GIÁ:
-${getBlockContent("rubric") || "Chưa có"}
-
-YÊU CẦU:
-Hãy chuẩn hóa toàn bộ dữ liệu trên theo prompt xuất giáo án Word và chỉ trả về JSON hợp lệ.
-`;
-          }
         } else if (input.contentType === "application_activity") {
           jsonFormatInstruction = `
 Dựa trên thông tin bài học và các hoạt động trước đó, thiết kế HOẠT ĐỘNG VẬN DỤNG môn Địa lí.
@@ -600,14 +564,6 @@ ${jsonFormatInstruction}
         });
 
         const text = response.text || "{}";
-        interface GeoAIOutput {
-          title: string;
-          content: string;
-          suggestions: string[];
-          createdAt?: string;
-          resultContent?: string;
-          rawData?: any;
-        }
         let parsed: GeoAIOutput = { title: "Lỗi tạo nội dung", content: text, suggestions: [] };
         let rawJsonObj: any = null;
         

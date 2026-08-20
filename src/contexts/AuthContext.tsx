@@ -7,7 +7,7 @@ interface AuthContextType {
   loading: boolean;
   loginAsGuest: () => void;
   loginAsDemo: (role: 'teacher' | 'student') => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);

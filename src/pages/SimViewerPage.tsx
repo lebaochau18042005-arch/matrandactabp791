@@ -23,6 +23,7 @@ import VolcanoSim               from '../components/VolcanoSim';
 import SolarSystemSim          from '../components/SolarSystemSim';
 import ZenithSunSim            from '../components/ZenithSunSim';
 import AtmosphericStructureSim  from '../components/AtmosphericStructureSim';
+import PolarDaySim               from '../components/PolarDaySim';
 import WaterCycleSim            from '../components/WaterCycleSim';
 import SeaLandBreezeSim         from '../components/SeaLandBreezeSim';
 import TyphoonSim               from '../components/TyphoonSim';
@@ -117,7 +118,7 @@ function SimCanvas({
     case 'seasons':       return <SeasonsSim />;
     case 'timezone':      return <TimeZoneSim />;
     case 'coordinate':    return <CoordinateSim />;
-    case 'sunray':        return <SunraySim customParams={customParams} />;
+    case 'sunray':        return <SunraySim />;
     case 'atmosphere':    return <AtmosphericCirculationSim />;
     case 'windpressure':  return <WindPressureSim />;
     case 'orographicrain':return <OrographicRainSim customParams={customParams} customQuestions={customQuestions} />;
@@ -129,6 +130,7 @@ function SimCanvas({
     case 'solar-system':  return <SolarSystemSim customParams={customParams} customQuestions={customQuestions} />;
     case 'zenith-sun':    return <ZenithSunSim customParams={customParams} customQuestions={customQuestions} />;
     case 'atm-structure': return <AtmosphericStructureSim customParams={customParams} customQuestions={customQuestions} />;
+    case 'polar-day':     return <PolarDaySim />;
     case 'water-cycle':   return <WaterCycleSim customParams={customParams} customQuestions={customQuestions} />;
     case 'sea-land-breeze': return <SeaLandBreezeSim customParams={customParams} customQuestions={customQuestions} />;
     case 'typhoon':       return <TyphoonSim customParams={customParams} customQuestions={customQuestions} />;

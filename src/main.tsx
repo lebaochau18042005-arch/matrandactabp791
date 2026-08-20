@@ -18,6 +18,7 @@ const SimViewer      = lazy(() => import('./pages/SimViewerPage'));
 const AIAssistant    = lazy(() => import('./pages/AIAssistantPage'));
 const LessonBuilder  = lazy(() => import('./pages/LessonBuilderPage'));
 const LessonViewer   = lazy(() => import('./pages/LessonViewerPage'));
+const TaskSubmission = lazy(() => import('./pages/TaskSubmissionPage'));
 const QuizLive       = lazy(() => import('./pages/QuizLivePage'));
 const MapLab         = lazy(() => import('./pages/MapLabPage'));
 const Community      = lazy(() => import('./pages/CommunityPage'));
@@ -69,6 +70,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="/lesson-builder" element={<LessonBuilder />} />
               <Route path="/lesson-builder/:id" element={<LessonBuilder />} />
               <Route path="/lesson-viewer/:id" element={<LessonViewer />} />
+              <Route path="/assignments/:id/submit" element={<TaskSubmission />} />
               
               <Route path="/quiz/create"   element={<QuizCreate />} />
               <Route path="/quiz/:id"      element={<QuizAnswer />} />
@@ -85,10 +87,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="/workspace"     element={<App />} />
 
               {/* Root: go straight to teacher dashboard */}
-              <Route path="/"              element={<Navigate to="/teacher" replace />} />
+              <Route path="/"              element={<Navigate to="/dashboard" replace />} />
 
               {/* Fallback */}
-              <Route path="*"             element={<Navigate to="/teacher" replace />} />
+              <Route path="*"             element={<Navigate to="/dashboard" replace />} />
             </Routes>
             <Toaster position="top-right" richColors />
           </Suspense>

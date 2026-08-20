@@ -1,6 +1,6 @@
 // ─── App Context (XP, Badges, Progress) ───────────────────────────────────────
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export interface SimProgress {
   simId: string;
@@ -100,6 +100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Sync from Supabase on mount
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
     const loadUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -136,10 +137,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setRecentActivity(prev => [{ text: reason, xp: amt, time: now }, ...prev].slice(0, 20));
     }
 
-    // Sync to Supabase
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').update({ xp: newXP }).eq('id', user.id);
+    // Sync to Supabase only when a remote backend is configured
+    if (isSupabaseConfigured) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').update({ xp: newXP }).eq('id', user.id);
+      }
     }
   };
 
@@ -149,10 +152,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setBadges(next);
       localStorage.setItem('geohub_badges', JSON.stringify(next));
 
-      // Sync to Supabase
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('user_badges').insert({ student_id: user.id, badge_id: id });
+      // Sync to Supabase only when a remote backend is configured
+      if (isSupabaseConfigured) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('user_badges').insert({ student_id: user.id, badge_id: id });
+        }
       }
     }
   };

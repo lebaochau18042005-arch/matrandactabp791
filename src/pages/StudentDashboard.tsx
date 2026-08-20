@@ -11,12 +11,14 @@ import {
   ChevronRight,
   Award,
   BookOpen,
+  ClipboardList,
+  PenLine,
   Video,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAppContext, xpToLevel, levelName } from '../contexts/AppContext';
 import AppLayout from '../layouts/AppLayout';
-import { useAssignmentStore } from '../store/assignmentStore';
+import { inferAssignmentType, useAssignmentStore } from '../store/assignmentStore';
 import { useSubmissionStore } from '../store/submissionStore';
 import { SIMULATIONS } from '../data/simulations';
 
@@ -170,13 +172,26 @@ export default function StudentDashboard() {
                 </p>
               ) : (
                 assignments.map((task) => {
-                  const isLesson = !!task.lesson_id;
-                  const title = isLesson
+                  const taskType = inferAssignmentType(task);
+                  const isLesson = taskType === 'lesson';
+                  const isSimulation = taskType === 'simulation';
+                  const isEssay = taskType === 'essay';
+                  const isWritten = taskType === 'worksheet' || isEssay;
+                  const fallbackTitle = isLesson
                     ? `Bài giảng: ${task.lesson?.title || 'Bài giảng'}`
-                    : `Mô phỏng: ${SIMULATIONS.find(s => s.id === task.simulation_id)?.name || 'Mô phỏng 3D'}`;
-                  const dest = isLesson
-                    ? `/lesson-viewer/${task.lesson_id}?assignment=${task.id}`
-                    : `/simulations/${task.simulation_id}?assignment=${task.id}`;
+                    : isSimulation
+                      ? `Mô phỏng: ${SIMULATIONS.find(s => s.id === task.simulation_id)?.name || 'Mô phỏng 3D'}`
+                      : isEssay
+                        ? 'Bài tập tự luận'
+                        : 'Phiếu học tập';
+                  const title = task.title || fallbackTitle;
+                  const dest = isWritten
+                    ? `/assignments/${task.id}/submit`
+                    : isLesson
+                      ? `/lesson-viewer/${task.lesson_id}?assignment=${task.id}`
+                      : `/simulations/${task.simulation_id}?assignment=${task.id}`;
+                  const TaskIcon = isLesson ? BookOpen : isSimulation ? Video : isEssay ? PenLine : ClipboardList;
+                  const iconColors = isLesson ? ['rgba(139,92,246,0.2)', '#a78bfa'] : isSimulation ? ['rgba(20,184,166,0.2)', '#2dd4bf'] : isEssay ? ['rgba(244,63,94,0.2)', '#fda4af'] : ['rgba(245,158,11,0.2)', '#fcd34d'];
 
                   return (
                     <div key={task.id} style={{ position: 'relative', zIndex: 20 }} className="rounded-2xl border border-white/10 bg-slate-800/70 p-4 sm:p-5">
@@ -184,10 +199,10 @@ export default function StudentDashboard() {
                         <div style={{
                           width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isLesson ? 'rgba(139,92,246,0.2)' : 'rgba(20,184,166,0.2)',
-                          color: isLesson ? '#a78bfa' : '#2dd4bf',
+                          background: iconColors[0],
+                          color: iconColors[1],
                         }}>
-                          {isLesson ? <BookOpen size={18} /> : <Video size={18} />}
+                          <TaskIcon size={18} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ color: 'white', fontWeight: 500, fontSize: '14px', marginBottom: '6px' }}>{title}</p>
@@ -196,7 +211,7 @@ export default function StudentDashboard() {
                               📅 Hạn: {new Date(task.deadline).toLocaleDateString('vi-VN')}
                             </span>
                             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(234,179,8,0.1)', color: '#fde047', border: '1px solid rgba(234,179,8,0.2)' }}>
-                              +{isLesson ? 100 : 30} XP
+                              +{task.points ?? (isLesson ? 100 : isSimulation ? 30 : isEssay ? 100 : 70)} XP
                             </span>
                           </div>
                         </div>

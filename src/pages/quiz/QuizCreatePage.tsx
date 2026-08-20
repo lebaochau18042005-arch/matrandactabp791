@@ -4,6 +4,7 @@ import AppLayout from '../../layouts/AppLayout';
 import { useQuizStore } from '../../store/quizStore';
 import { generateQuestionsByMockAI, GeneratedQuiz, QuizQuestion } from '../../utils/mockAIGenerator';
 import { generateQuizWithGemini } from '../../utils/geminiGenerator';
+import { readGeminiApiKey, readGeminiModel } from '../../lib/geminiSettings';
 import { GEOGRAPHY_LESSONS } from '../../data/geographyLessons';
 import { toast } from 'sonner';
 import { BrainCircuit, Save, FileDown, Plus, Trash2, Edit2, CheckCircle2, Upload, FileText, Image as ImageIcon, X, Key, Play } from 'lucide-react';
@@ -54,8 +55,8 @@ export default function QuizCreatePage() {
       }
       
       let q: GeneratedQuiz;
-      const savedApiKey = localStorage.getItem('gemini_api_key') || '';
-      const savedModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash';
+      const savedApiKey = readGeminiApiKey();
+      const savedModel = readGeminiModel();
       
       if (savedApiKey.trim()) {
         toast.info(`Đang kết nối tới ${savedModel}, vui lòng chờ...`, { duration: 3000 });

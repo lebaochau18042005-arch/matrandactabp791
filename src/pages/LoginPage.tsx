@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from '../lib/geminiSettings';
 
 // ─── Floating orb config ───────────────────────────────────────────────────────
 const ORBS = [
@@ -28,19 +29,19 @@ export default function LoginPage() {
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
-  const [selectedModel, setSelectedModel] = useState(localStorage.getItem('gemini_model') || 'gemini-3.5-flash');
+  const [apiKey, setApiKey] = useState(readGeminiApiKey);
+  const [selectedModel, setSelectedModel] = useState(readGeminiModel);
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setApiKey(val);
-    localStorage.setItem('gemini_api_key', val.trim());
+    saveGeminiApiKey(val);
   };
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setSelectedModel(val);
-    localStorage.setItem('gemini_model', val);
+    saveGeminiModel(val);
   };
 
   // Redirect if already authenticated
@@ -435,7 +436,7 @@ export default function LoginPage() {
                   <label style={{ display: 'block', color: 'rgba(255,255,255,0.45)', fontSize: '11px', marginBottom: '4px' }}>MODEL</label>
                   <select
                     value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
+                    onChange={handleModelChange}
                     className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white focus:border-teal-500 focus:outline-none transition-colors"
                   >
                     <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mặc định)</option>

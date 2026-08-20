@@ -244,7 +244,7 @@ export default function LessonBuilderPage() {
       setBlocks([
         { id: "b0", type: "title", content: "Bài 12: Hoàn lưu khí quyển" },
         { id: "b1", type: "objective", content: "1. Trình bày hệ thống gió hành tinh\n2. Giải thích lực Coriolis" },
-        { id: "b2", type: "simulation", content: "atmospheric-circulation" },
+        { id: "b2", type: "simulation", content: "atmosphere" },
       ]);
     }
   }, [id, lessons, navigate]);
@@ -339,15 +339,15 @@ export default function LessonBuilderPage() {
     const savedId = await handleSave(true);
     if (!savedId) return;
 
-    await assignTask({
+    const assigned = await assignTask({
       class_name: assignClass,
       lesson_id: savedId,
       simulation_id: null,
       deadline: assignDeadline,
     });
-    
+
+    if (!assigned) return;
     setShowAssignModal(false);
-    toast.success("Đã giao bài giảng cho lớp thành công!");
   };
 
   const handleExportPDF = () => {
@@ -519,7 +519,7 @@ export default function LessonBuilderPage() {
             <button className="lb-btn" style={{ ...styles.topBtn, background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", fontWeight: 600 }} onClick={() => navigate('/quiz/create')}>
               🧠 Tạo Quiz AI
             </button>
-            <button className="lb-btn" style={{ ...styles.topBtn, background: "linear-gradient(135deg, #0d9488, #0891b2)", color: "#fff", fontWeight: 600 }} onClick={handleSave}>
+            <button className="lb-btn" style={{ ...styles.topBtn, background: "linear-gradient(135deg, #0d9488, #0891b2)", color: "#fff", fontWeight: 600 }} onClick={() => { void handleSave(); }}>
               💾 Lưu
             </button>
           </div>

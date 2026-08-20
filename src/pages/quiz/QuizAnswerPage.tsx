@@ -58,7 +58,7 @@ export default function QuizAnswerPage() {
       }
       else if (q.type === 'short_answer') {
         const numericAns = parseFloat(ans);
-        if (!isNaN(numericAns) && Math.abs(numericAns - q.correctAnswer) <= q.tolerance) {
+        if (!isNaN(numericAns) && Math.abs(numericAns - q.shortAnswer.correctAnswer) <= q.shortAnswer.tolerance) {
           saScore += saValue;
         }
       }

@@ -19,8 +19,9 @@ export interface SimTab {
 interface SimActivityProps {
   title?: string;
   questions: ActivityQuestion[];
-  visible: boolean;
-  onToggle: () => void;
+  visible?: boolean;
+  onToggle?: () => void;
+  onComplete?: (score: number) => void;
   themeColor?: string;
 }
 
@@ -29,8 +30,11 @@ export const SimActivity: React.FC<SimActivityProps> = ({
   questions,
   visible,
   onToggle,
+  onComplete,
   themeColor = '#1e40af',
 }) => {
+  const isInline = visible === undefined && onToggle === undefined;
+  const resolvedVisible = visible ?? true;
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [checked, setChecked] = useState(false);
   const [score, setScore] = useState<{ correct: number; total: number } | null>(null);
@@ -49,6 +53,7 @@ export const SimActivity: React.FC<SimActivityProps> = ({
     });
     setScore({ correct, total: questions.length });
     setChecked(true);
+    onComplete?.(correct);
   };
 
   const handleReset = () => {
@@ -65,10 +70,10 @@ export const SimActivity: React.FC<SimActivityProps> = ({
       : 'wrong';
   };
 
-  if (!visible) {
+  if (!resolvedVisible) {
     return (
       <button
-        onClick={onToggle}
+        onClick={() => onToggle?.()}
         className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-white shadow-lg transition-all hover:scale-105 active:scale-95"
         style={{ background: themeColor }}
       >
@@ -79,9 +84,11 @@ export const SimActivity: React.FC<SimActivityProps> = ({
 
   return (
     <div
-      className="absolute top-2 left-2 z-30 rounded-2xl shadow-2xl overflow-hidden"
+      className={isInline
+        ? "w-full rounded-2xl shadow-xl overflow-hidden"
+        : "absolute top-2 left-2 z-30 rounded-2xl shadow-2xl overflow-hidden"}
       style={{
-        width: '260px',
+        width: isInline ? '100%' : '260px',
         background: 'rgba(15,23,54,0.92)',
         backdropFilter: 'blur(12px)',
         border: `1.5px solid ${themeColor}55`,
@@ -97,7 +104,7 @@ export const SimActivity: React.FC<SimActivityProps> = ({
           <span className="text-white font-black text-xs tracking-wide">{title}</span>
         </div>
         <button
-          onClick={onToggle}
+          onClick={() => onToggle?.()}
           className="text-white/70 hover:text-white text-base leading-none transition-colors"
         >
           ✕

@@ -37,6 +37,7 @@ function drawScene(
   tab: string,
   currentDay: number,
   playing: boolean,
+  frame: number,
   onDayChange: (day: number) => void
 ) {
   // Center coordinates
@@ -450,7 +451,7 @@ const ZenithSunSim: React.FC<{ customParams?: any; customQuestions?: any }> = ({
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.restore();
-          drawScene(ctx, W, H, tabRef.current, dayRef.current, playingRef.current, (d) => { dayRef.current = d; setDay(Math.round(d)); });
+          drawScene(ctx, W, H, tabRef.current, dayRef.current, playingRef.current, frameRef.current, (d) => { dayRef.current = d; setDay(Math.round(d)); });
         }
       }
       rafRef.current = requestAnimationFrame(loop);

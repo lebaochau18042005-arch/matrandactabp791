@@ -19,11 +19,13 @@ export const supabase = isSupabaseConfigured
           data: { subscription: { unsubscribe: () => {} } },
         }),
         getSession: async () => ({ data: { session: null }, error: null }),
+        getUser: async () => ({ data: { user: null }, error: null }),
       },
       from: (_table: string) => ({
         select: () => ({ eq: () => ({ single: async () => ({ data: null, error: new Error('No Supabase') }) }) }),
         insert: async () => ({ data: null, error: new Error('No Supabase') }),
         update: () => ({ eq: async () => ({ data: null, error: new Error('No Supabase') }) }),
         upsert: async () => ({ data: null, error: new Error('No Supabase') }),
+        delete: () => ({ eq: async () => ({ data: null, error: new Error('No Supabase') }) }),
       }),
     } as any);

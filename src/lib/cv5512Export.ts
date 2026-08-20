@@ -51,7 +51,7 @@ function createBulletParagraph(text: string): Paragraph {
   });
 }
 
-function createHeading(text: string, level: HeadingLevel): Paragraph {
+function createHeading(text: string, level: (typeof HeadingLevel)[keyof typeof HeadingLevel]): Paragraph {
   return new Paragraph({
     heading: level,
     children: [

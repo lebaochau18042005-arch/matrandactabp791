@@ -294,7 +294,7 @@ export default function PolarDaySim() {
   const [orbitAngle, setOrbitAngle] = useState(90); // 90 = Summer Solstice (Polar day in North)
   const [rotation, setRotation] = useState(0);
 
-  const reqRef = useRef<number>();
+  const reqRef = useRef<number | null>(null);
   const lastTime = useRef<number>(performance.now());
 
   useEffect(() => {
@@ -332,7 +332,7 @@ export default function PolarDaySim() {
   }, [playing, rotation, orbitAngle, activeTab]);
 
   return (
-    <SimActivity id="polar-day">
+    <div id="polar-day" className="w-full h-full flex flex-col overflow-hidden bg-slate-950">
       <SimTopBar title="Mô phỏng: Ngày Cực - Đêm Cực" />
       
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-950">
@@ -387,12 +387,10 @@ export default function PolarDaySim() {
         <div className="w-full lg:w-96 flex flex-col bg-slate-900 border-l border-white/10 z-20">
           <SimTabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
           <div className="flex-1 overflow-y-auto p-5">
-            {TAB_QUESTIONS[activeTab].map(q => (
-              <div key={q.id} className="mb-6"><SimActivity.Question q={q} /></div>
-            ))}
+            <SimActivity questions={TAB_QUESTIONS[activeTab]} title="Kiểm tra nhanh" />
           </div>
         </div>
       </div>
-    </SimActivity>
+    </div>
   );
 }
