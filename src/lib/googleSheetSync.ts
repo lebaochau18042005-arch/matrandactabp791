@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import { readXlsxRows, xlsxRowsToObjects } from './excel';
 
 export interface ImportedStudent {
   id: number;
@@ -144,17 +144,13 @@ export function rowsToStudents(rows: Record<string, any>[]): ImportedStudent[] {
 
 export async function parseRosterFile(file: File): Promise<ImportedStudent[]> {
   const extension = file.name.split('.').pop()?.toLowerCase();
-  const buffer = await file.arrayBuffer();
 
-  if (extension === 'xlsx' || extension === 'xls') {
-    const workbook = XLSX.read(buffer);
-    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
-    return rowsToStudents(rows);
+  if (extension === 'xlsx') {
+    return rowsToStudents(xlsxRowsToObjects(await readXlsxRows(file)));
   }
+  if (extension === 'xls') throw new Error('File .xls cũ không được hỗ trợ. Hãy lưu lại dưới dạng .xlsx hoặc CSV.');
 
-  const text = new TextDecoder('utf-8').decode(buffer);
-  return parseRosterCsv(text);
+  return parseRosterCsv(await file.text());
 }
 
 export function parseRosterCsv(csvText: string): ImportedStudent[] {

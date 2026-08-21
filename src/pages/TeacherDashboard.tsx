@@ -18,8 +18,6 @@ import {
   CalendarClock,
   Database,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -29,6 +27,7 @@ import AppLayout from '../layouts/AppLayout';
 import { supabase } from '../lib/supabase';
 import { useLessonStore } from '../store/lessonStore';
 import { useAssignmentStore } from '../store/assignmentStore';
+import { downloadObjectsAsXlsx } from '../lib/excel';
 
 // ─── Mock students ────────────────────────────────────────────────────────────
 const STUDENTS = [
@@ -102,7 +101,7 @@ export default function TeacherDashboard() {
     });
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const data = STUDENTS.map(stu => ({
       'ID': stu.id,
       'Học sinh': stu.name,
@@ -111,13 +110,12 @@ export default function TeacherDashboard() {
       'Điểm TB': stu.avgScore,
       'Trạng thái': STATUS_CONFIG[stu.status as Status].label,
     }));
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, `Lop_${activeTab}`);
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `Danh_sach_lop_${activeTab}.xlsx`);
-    toast.success('Đã xuất file Excel thành công!');
+    try {
+      await downloadObjectsAsXlsx(data, `Danh_sach_lop_${activeTab}.xlsx`, `Lop_${activeTab}`);
+      toast.success('Đã xuất file Excel thành công!');
+    } catch {
+      toast.error('Không thể xuất file Excel. Vui lòng thử lại.');
+    }
   };
 
   const handleMigrateData = async () => {

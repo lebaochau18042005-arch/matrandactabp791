@@ -94,7 +94,9 @@ import {
   validateGeneratedExamAgainstPlan
 } from './features/assessment/examAlignment';
 import { allocateGeographyCompetencyCodes } from './features/assessment/geographyCompetencyAllocation';
+import { getGeographyCalculationSpec } from './data/geographyLearningOutcomes';
 import { normalizeExtractedDocumentText } from './features/assessment/sourceDocumentText';
+import { downloadObjectsAsXlsx, readXlsxRows, xlsxRowsToObjects, xlsxRowsToText } from './lib/excel';
 import type { SubjectProfile } from './features/assessment/subjectProfiles/types';
 import {
   ACTIVE_SUBJECT_PROFILE_STORAGE_KEY,
@@ -1363,7 +1365,7 @@ const COGNITIVE_LEVELS = COGNITIVE_LEVEL_IDS;
 type CognitiveLevel = typeof COGNITIVE_LEVELS[number];
 
 const SHORT_ANSWER_SPEC_RULES = `QUY TẮC CHO PHẦN III – CÂU HỎI TRẢ LỜI NGẮN DẠNG TÍNH TOÁN:
-1. Trong bản đặc tả, câu trả lời ngắn chỉ ghi mô tả ngắn gọn về mức độ nhận thức tương ứng; không ghi các nhãn hoặc phần nội dung bổ sung khác.
+1. Trong bản đặc tả môn Địa lí, ô có câu trả lời ngắn phải mô tả rõ thao tác tính toán / xử lí số liệu địa lí đặc thù của bài học; không ghi các nhãn tiêu đề rườm rà.
 2. Biết = tính trực tiếp một bước, số liệu và đơn vị rõ; Hiểu = tính toán kết hợp so sánh, nhận xét hoặc xác định mối quan hệ; Vận dụng = xử lí nhiều bước, dữ liệu mới hoặc tình huống thực tiễn.
 3. Phép tính chỉ là phương thức đánh giá YCCĐ hoặc năng lực địa lí tương ứng và phải liên hệ trực tiếp với nội dung bài học.
 4. Không đưa hướng dẫn kĩ thuật, quy tắc làm tròn, hình thức ghi đáp án hoặc đáp án vào bản đặc tả.`;
@@ -2313,11 +2315,21 @@ const MatrixModule = ({ subjectProfile, onSubjectProfileUpdate }: MatrixModulePr
       .join('\n')
       .trim();
 
+    const calcSpec = isSystemGeography
+      ? getGeographyCalculationSpec(content || cleanContent, topic || cleanTopic, type)
+      : '';
+
     if (hasShort) {
+      if (originalYccd) {
+        return `${originalYccd}\n- [NL2 - Tìm hiểu địa lí]: ${calcSpec}`;
+      }
+      if (calcSpec) {
+        return `- [NL2 - Tìm hiểu địa lí]: ${calcSpec}`;
+      }
       const shortLevelDescriptions: Record<CognitiveLevel, string> = {
-        know: '- Biết (B): trả lời trực tiếp, một bước, dữ kiện rõ ràng.',
-        understand: '- Hiểu (H): xử lí thông tin kết hợp so sánh, giải thích hoặc xác định mối quan hệ.',
-        apply: '- Vận dụng (VD): xử lí nhiều bước, dữ liệu mới hoặc tình huống thực tiễn.'
+        know: '- Biết (B): tính toán trực tiếp, một bước, số liệu và đơn vị rõ ràng.',
+        understand: '- Hiểu (H): tính toán xử lí thông tin kết hợp so sánh, giải thích hoặc xác định mối quan hệ.',
+        apply: '- Vận dụng (VD): xử lí số liệu nhiều bước, dữ liệu mới hoặc tình huống thực tiễn.'
       };
       return shortLevelDescriptions[type];
     }
@@ -2525,14 +2537,10 @@ const MatrixModule = ({ subjectProfile, onSubjectProfileUpdate }: MatrixModulePr
       const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
       return normalizeExtractedDocumentText(result.value);
     }
-    if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
-      const data = new Uint8Array(await file.arrayBuffer());
-      const XLSX = await import('xlsx');
-      const workbook = XLSX.read(data, { type: 'array' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rowsFromSheet = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      return rowsFromSheet.map(row => (row as any[]).join('\t')).join('\n');
+    if (lowerName.endsWith('.xlsx')) {
+      return xlsxRowsToText(await readXlsxRows(file));
     }
+    if (lowerName.endsWith('.xls')) throw new Error('File .xls cũ không được hỗ trợ. Hãy lưu lại dưới dạng .xlsx hoặc CSV.');
     return file.text();
   };
 
@@ -3288,7 +3296,8 @@ Chú ý cực kỳ quan trọng:
         mc: row.mc, tf: row.tf, short: row.short, essay: row.essay
       }));
       const subjectSpecRules = isSystemGeography
-        ? 'Chỉ dùng khái niệm, thao tác và YCCĐ thuộc môn Địa lí; mã NL chỉ dùng ở ô phân bổ, không chèn vào nội dung YCCĐ.'
+        ? 'Chỉ dùng khái niệm, thao tác và YCCĐ thuộc môn Địa lí; mã NL chỉ dùng ở ô phân bổ, không chèn vào nội dung YCCĐ.\n' +
+          'QUY TẮC BẮT BUỘC PHẦN III (TRẢ LỜI NGẮN TÍNH TOÁN): Nếu ô nào có câu hỏi Trả lời ngắn (short > 0), YCCĐ tại ô đó BẮT BUỘC phải mô tả rõ thao tác tính toán / xử lí số liệu địa lí đặc thù của bài học (ví dụ: tính toán cự li bản đồ, múi giờ, biên độ nhiệt, cân bằng ẩm, mật độ dân số, cơ cấu GDP, tốc độ tăng trưởng, tỉ trọng, cự li vận chuyển, cán cân XNK...). Nếu ô vừa có câu TNKQ/Đ-S vừa có Trả lời ngắn, hãy kết hợp cả YCCĐ lí thuyết và thao tác tính toán tương ứng.'
         : 'Đây là ' + ACTIVE_SUBJECT_PROFILE.name + ', không phải môn Địa lí. Mọi mô tả phải trích hoặc rút gọn từ NGUON_YCCD; không dùng mẫu bản đồ, vị trí địa lí, biểu đồ địa lí, thiên tai hoặc mã NL1/NL2/NL3 nếu nguồn không nêu.';
       const prompt = 'Bạn là ' + ACTIVE_SUBJECT_PROFILE.ai.roles.specification + ' cho ' + ACTIVE_SUBJECT_PROFILE.ai.subjectLabel + ' theo Công văn 7991.\n' +
         ACTIVE_SUBJECT_PROFILE.ai.sourceGuardrail + '\n\n' +
@@ -3296,9 +3305,9 @@ Chú ý cực kỳ quan trọng:
         '<NGUON_YCCD>\n' + specSource + '\n</NGUON_YCCD>\n<MA_TRAN>\n' + JSON.stringify(matrixForPrompt) + '\n</MA_TRAN>\n\n' +
         'Trả về duy nhất mảng JSON thô: [{"rowIndex":0,"know":"","understand":"","apply":""}]. ' +
         'Chỉ viết YCCĐ cho mức có câu hỏi; mức không có câu để chuỗi rỗng. ' +
-        'Không ghi các cụm Mức độ nhận thức, Dạng câu hỏi và thao tác, Biểu hiện cụ thể cần đánh giá, Yêu cầu kỹ thuật và đáp án, YCCĐ gốc. ' +
+        'Không ghi các cụm tiêu đề như Mức độ nhận thức, Dạng câu hỏi và thao tác, Biểu hiện cụ thể cần đánh giá, Yêu cầu kỹ thuật và đáp án, YCCĐ gốc. ' +
         'Không đưa cách làm tròn, hình thức ghi đáp án hoặc đáp án. Không đặt NL1, NL2, NL3 trong YCCĐ. ' +
-        'Nếu mức có câu trả lời ngắn, chỉ ghi mô tả ngắn gọn về mức độ nhận thức tương ứng. Không bọc JSON trong Markdown.';
+        'Nếu mức có câu trả lời ngắn môn Địa lí, phải mô tả cụ thể thao tác tính toán / xử lí số liệu của bài học tương ứng. Không bọc JSON trong Markdown.';
       const parts: any[] = [{ text: prompt }];
       if (attachedSpecPdf) {
         parts.push({ text: 'PDF đính kèm sau đây là nguồn YCCĐ dùng để lập bản đặc tả.' });
@@ -3917,20 +3926,11 @@ ${shortAnswerExamRules}
     const cleaned = stripCompetencyLabels(specText);
     const sections = parseSpecSections(cleaned);
 
-    if (hasShort) {
-      const levelSection = sections.find(section => section.label === 'MỨC ĐỘ NHẬN THỨC');
-      if (levelSection?.body) return levelSection.body;
-      if (sections.length === 0 && cleaned) {
-        return cleaned.replace(/^\s*MỨC ĐỘ NHẬN THỨC\s*:?\s*/gmi, '').trim();
-      }
-      return getDefaultSpec(level, '', '', true);
+    if (sections.length === 0) {
+      return cleaned.replace(/^\s*MỨC ĐỘ NHẬN THỨC\s*:?\s*/gmi, '').trim();
     }
 
-    if (sections.length === 0) return cleaned;
     const forbiddenSections = new Set([
-      'BIỂU HIỆN CỤ THỂ CẦN ĐÁNH GIÁ',
-      'DẠNG CÂU HỎI VÀ THAO TÁC TÍNH TOÁN',
-      'MỨC ĐỘ NHẬN THỨC',
       'YÊU CẦU KỸ THUẬT VÀ ĐÁP ÁN'
     ]);
     return sections
@@ -4439,11 +4439,11 @@ ${shortAnswerExamRules}
                   <p className="text-[11px] text-slate-500">Chủ đề, bài học và đơn vị kiến thức sẽ được kiểm tra.</p>
                 </div>
                 <div className="relative group">
-                  <input type="file" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf" onChange={handleFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
+                  <input type="file" accept=".docx,.xlsx,.csv,.txt,.pdf" onChange={handleFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
                   <div className="flex min-h-[105px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-teal-300 bg-white p-4 text-center group-hover:border-teal-500">
                     <Upload size={24} className="text-teal-500" />
                     <p className="text-xs font-black text-slate-700">Tải file kiến thức</p>
-                    <p className="text-[10px] text-slate-400">Word, Excel, CSV, TXT hoặc PDF (tối đa 8 MB)</p>
+                    <p className="text-[10px] text-slate-400">Word, Excel (.xlsx), CSV, TXT hoặc PDF (tối đa 8 MB)</p>
                     {sourceFileName && <p className="max-w-full truncate rounded-lg bg-teal-50 px-3 py-1 text-[10px] font-bold text-teal-700">{sourceFileName}</p>}
                   </div>
                 </div>
@@ -4462,11 +4462,11 @@ ${shortAnswerExamRules}
                   <p className="text-[11px] text-slate-500">YCCĐ là căn cứ để AI đề xuất mức độ và giải thích lý do.</p>
                 </div>
                 <div className="relative group">
-                  <input type="file" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf" onChange={handleSpecFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
+                  <input type="file" accept=".docx,.xlsx,.csv,.txt,.pdf" onChange={handleSpecFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
                   <div className="flex min-h-[105px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-300 bg-white p-4 text-center group-hover:border-indigo-500">
                     <Upload size={24} className="text-indigo-500" />
                     <p className="text-xs font-black text-slate-700">Tải file YCCĐ</p>
-                    <p className="text-[10px] text-slate-400">Word, Excel, CSV, TXT hoặc PDF (tối đa 8 MB)</p>
+                    <p className="text-[10px] text-slate-400">Word, Excel (.xlsx), CSV, TXT hoặc PDF (tối đa 8 MB)</p>
                     {specSourceFileName && <p className="max-w-full truncate rounded-lg bg-indigo-50 px-3 py-1 text-[10px] font-bold text-indigo-700">{specSourceFileName}</p>}
                   </div>
                 </div>
@@ -5123,11 +5123,11 @@ ${shortAnswerExamRules}
             </div>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
               <div className="relative group">
-                <input type="file" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf" onChange={handleSpecFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
+                <input type="file" accept=".docx,.xlsx,.csv,.txt,.pdf" onChange={handleSpecFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
                 <div className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-300 bg-white p-4 text-center group-hover:border-indigo-500">
                   <Upload size={24} className="mb-2 text-indigo-500" />
                   <p className="text-xs font-black text-slate-700">Tải file YCCĐ</p>
-                  <p className="mt-1 text-[10px] text-slate-400">Word, Excel, CSV, TXT, PDF</p>
+                  <p className="mt-1 text-[10px] text-slate-400">Word, Excel (.xlsx), CSV, TXT, PDF</p>
                   {specSourceFileName && <p className="mt-2 max-w-[200px] truncate text-[10px] font-bold text-indigo-600">{specSourceFileName}</p>}
                 </div>
               </div>
@@ -5445,11 +5445,11 @@ ${shortAnswerExamRules}
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
                 <div className="space-y-3">
                   <div className="relative group">
-                    <input type="file" accept=".docx,.xlsx,.xls,.csv,.txt,.pdf" onChange={handleExamSourceFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
+                    <input type="file" accept=".docx,.xlsx,.csv,.txt,.pdf" onChange={handleExamSourceFileUpload} className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" />
                     <div className="flex min-h-[145px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-indigo-300 bg-white p-4 text-center group-hover:border-indigo-500">
                       <Upload size={25} className="mb-2 text-indigo-500" />
                       <p className="text-xs font-black text-slate-800">Tải tài liệu tạo đề</p>
-                      <p className="mt-1 text-[10px] text-slate-400">Word, Excel, CSV, TXT hoặc PDF — tối đa 8 MB</p>
+                      <p className="mt-1 text-[10px] text-slate-400">Word, Excel (.xlsx), CSV, TXT hoặc PDF — tối đa 8 MB</p>
                       {examSourceFileName && <p className="mt-2 max-w-[235px] truncate rounded-lg bg-indigo-50 px-3 py-1 text-[10px] font-bold text-indigo-700">{examSourceFileName}</p>}
                     </div>
                   </div>
@@ -5986,43 +5986,38 @@ const ExamBankModule = ({ apiKey, selectedModel }: { apiKey: string; selectedMod
   const jsonToMarkdownTable = (data: any[]) => {
     if (!data || data.length === 0) return '';
     const headers = Object.keys(data[0]);
-    const headerRow = `| ${headers.join(' | ')} |`;
+    const escapeCell = (value: unknown) => String(value ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+    const headerRow = `| ${headers.map(escapeCell).join(' | ')} |`;
     const separatorRow = `| ${headers.map(() => '---').join(' | ')} |`;
-    const bodyRows = data.map(row => `| ${headers.map(h => row[h]).join(' | ')} |`).join('\n');
+    const bodyRows = data.map(row => `| ${headers.map(h => escapeCell(row[h])).join(' | ')} |`).join('\n');
     return `${headerRow}\n${separatorRow}\n${bodyRows}`;
   };
 
-  const handleTableImport = (e: React.ChangeEvent<HTMLInputElement>, partIdx: number, qIdx: number) => {
+  const handleTableImport = async (e: React.ChangeEvent<HTMLInputElement>, partIdx: number, qIdx: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
+    const input = e.currentTarget;
     const extension = file.name.split('.').pop()?.toLowerCase();
 
-    if (extension === 'csv') {
-      reader.onload = async (event) => {
-        const text = event.target?.result as string;
+    try {
+      if (extension === 'csv') {
         const Papa = (await import('papaparse')).default;
-        Papa.parse(text, {
+        const results = Papa.parse(await file.text(), {
           header: true,
-          complete: (results) => {
-            const mdTable = jsonToMarkdownTable(results.data);
-            updateManualQuestion(partIdx, qIdx, { table: mdTable });
-          }
+          skipEmptyLines: true
+        }) as { data: Record<string, unknown>[] };
+        updateManualQuestion(partIdx, qIdx, { table: jsonToMarkdownTable(results.data) });
+      } else if (extension === 'xlsx') {
+        updateManualQuestion(partIdx, qIdx, {
+          table: jsonToMarkdownTable(xlsxRowsToObjects(await readXlsxRows(file)))
         });
-      };
-      reader.readAsText(file);
-    } else if (extension === 'xlsx' || extension === 'xls') {
-      reader.onload = async (event) => {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const XLSX = await import('xlsx');
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        const mdTable = jsonToMarkdownTable(jsonData);
-        updateManualQuestion(partIdx, qIdx, { table: mdTable });
-      };
-      reader.readAsArrayBuffer(file);
+      } else {
+        throw new Error('Chỉ hỗ trợ file CSV hoặc Excel .xlsx.');
+      }
+    } catch (error) {
+      await Swal.fire('Không thể nhập bảng', error instanceof Error ? error.message : 'File không hợp lệ.', 'error');
+    } finally {
+      input.value = '';
     }
   };
 
@@ -6088,11 +6083,11 @@ const ExamBankModule = ({ apiKey, selectedModel }: { apiKey: string; selectedMod
         "Giải thích": q.explanation || ''
       }))
     );
-    const XLSX = await import('xlsx');
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions");
-    XLSX.writeFile(wb, `${exam.title}.xlsx`);
+    try {
+      await downloadObjectsAsXlsx(data, `${exam.title}.xlsx`, 'Questions');
+    } catch {
+      await Swal.fire('Lỗi xuất Excel', 'Không thể tạo file Excel. Vui lòng thử lại.', 'error');
+    }
   };
 
   const exportToQuizizz = async (exam: any) => {
@@ -6109,11 +6104,11 @@ const ExamBankModule = ({ apiKey, selectedModel }: { apiKey: string; selectedMod
         "Time in seconds": 30
       }))
     );
-    const XLSX = await import('xlsx');
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Quizizz");
-    XLSX.writeFile(wb, `${exam.title}_Quizizz.xlsx`);
+    try {
+      await downloadObjectsAsXlsx(data, `${exam.title}_Quizizz.xlsx`, 'Quizizz');
+    } catch {
+      await Swal.fire('Lỗi xuất Quizizz', 'Không thể tạo file Quizizz. Vui lòng thử lại.', 'error');
+    }
   };
 
   const fetchExams = () => {
@@ -6646,7 +6641,7 @@ const ExamBankModule = ({ apiKey, selectedModel }: { apiKey: string; selectedMod
                             <div className="flex gap-2">
                               <label className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold cursor-pointer hover:bg-slate-50 transition-all flex items-center gap-2">
                                 <Upload size={14} /> Nhập bảng (CSV/Excel)
-                                <input type="file" className="hidden" accept=".csv,.xlsx,.xls" onChange={e => handleTableImport(e, pIdx, qIdx)} />
+                                <input type="file" className="hidden" accept=".csv,.xlsx" onChange={e => handleTableImport(e, pIdx, qIdx)} />
                               </label>
                               {pIdx === 1 && (
                                 <button onClick={() => generateSEAsiaData(pIdx, qIdx)} className="px-4 py-2 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl text-xs font-bold flex items-center gap-2">

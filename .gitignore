@@ -10,10 +10,11 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.vercel/
 *.local
 
 # Extra skill/reference folders (not part of the web app)
-"SKILL EDUCATION"
+/SKILL EDUCATION/
 
 # Editor directories and files
 .vscode/*

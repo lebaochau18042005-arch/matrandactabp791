@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import AppLayout from '../layouts/AppLayout';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
+import { downloadObjectsAsXlsx } from '../lib/excel';
 import { useAssignmentStore } from '../store/assignmentStore';
 import { useSubmissionStore } from '../store/submissionStore';
 import { SIMULATIONS } from '../data/simulations';
@@ -17,7 +16,7 @@ export default function ReportsPage() {
     fetchClassSubmissions('10A1');
   }, [fetchStudentTasks, fetchClassSubmissions]);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     const data = submissions.map(s => {
       const assignment = assignments.find(a => a.id === s.assignment_id);
       const isLesson = !!assignment?.lesson_id;
@@ -34,13 +33,12 @@ export default function ReportsPage() {
       };
     });
     
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'TienDoHocSinh');
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(blob, `TienDoHocSinh_10A1.xlsx`);
-    toast.success('Đã xuất báo cáo Excel!');
+    try {
+      await downloadObjectsAsXlsx(data, 'TienDoHocSinh_10A1.xlsx', 'TienDoHocSinh');
+      toast.success('Đã xuất báo cáo Excel!');
+    } catch {
+      toast.error('Không thể xuất báo cáo Excel. Vui lòng thử lại.');
+    }
   };
 
   // Tính toán dữ liệu cho Tab 1

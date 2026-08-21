@@ -274,3 +274,64 @@ export const getAllowedFormulaNames = (profile: LessonAssessmentProfile) => (
     .map(id => GEOGRAPHY_FORMULAS.find(formula => formula.id === id)?.name)
     .filter((name): name is string => Boolean(name))
 );
+
+export const getGeographyCalculationSpec = (
+  lessonTitle: string,
+  topic: string,
+  level: LearningOutcomeLevel
+): string => {
+  const text = `${lessonTitle} ${topic}`.toLowerCase();
+  
+  if (/bản đồ|gps|tọa độ|vị trí|phạm vi|lãnh thổ|kinh tuyến|vĩ tuyến/i.test(text)) {
+    if (level === 'know') return 'Tính toán, chuyển đổi đơn vị hải lí sang kilômét hoặc xác định cự li, khoảng cách trên bản đồ theo tỉ lệ.';
+    if (level === 'understand') return 'Tính toán cự li thực tế từ tỉ lệ bản đồ, xác định chênh lệch kinh độ/tọa độ, múi giờ hoặc chiều rộng các bộ phận vùng biển.';
+    return 'Xử lí số liệu tọa độ, diện tích lãnh thổ; tính toán chênh lệch giờ thực tế và tỉ lệ diện tích các bộ phận lãnh thổ.';
+  }
+
+  if (/khí hậu|nhiệt|mưa|gió mùa|thời tiết|khí quyển|địa hình|núi|sông|thủy|lũ|cạn/i.test(text)) {
+    if (level === 'know') return 'Tính nhiệt độ trung bình năm, tổng lượng mưa năm hoặc biên độ nhiệt độ năm từ bảng số liệu cho sẵn.';
+    if (level === 'understand') return 'Tính toán và so sánh biên độ nhiệt, cân bằng ẩm, chênh lệch nhiệt độ theo độ cao địa hình/sườn núi hoặc lưu lượng nước sông ngòi.';
+    return 'Xử lí bảng số liệu nhiều năm về nhiệt độ, lượng mưa, lưu lượng nước mùa lũ/cạn; tính tỉ lệ lượng nước, chỉ số cực đoan để phân tích biến động khí hậu, thủy văn.';
+  }
+
+  if (/dân số|dân cư|lao động|việc làm|đô thị/i.test(text)) {
+    if (level === 'know') return 'Tính mật độ dân số, tỉ suất sinh thô, tỉ suất tử thô hoặc tỉ số giới tính từ số liệu cho trước.';
+    if (level === 'understand') return 'Tính tỉ suất gia tăng tự nhiên, tỉ lệ dân thành thị/nông thôn, cơ cấu lao động theo ngành và mức tăng quy mô dân số.';
+    return 'Xử lí số liệu dân số, lao động để tính tốc độ tăng trưởng, mức gia tăng tuyệt đối, cơ cấu chuyển dịch lao động và tỉ lệ đô thị hóa.';
+  }
+
+  if (/nông nghiệp|lương thực|cây trồng|chăn nuôi/i.test(text)) {
+    if (level === 'know') return 'Tính sản lượng cây trồng, quy mô đàn gia súc hoặc tỉ lệ cơ cấu đơn giản từ số liệu cho trước.';
+    if (level === 'understand') return 'Tính năng suất cây trồng, bình quân lương thực theo đầu người, cơ cấu và tỉ trọng các ngành nông - lâm - thủy sản.';
+    return 'Xử lí bảng số liệu nông nghiệp để tính tốc độ tăng trưởng sản lượng, mức tăng năng suất và phân tích chuyển dịch cơ cấu cây trồng, vật nuôi.';
+  }
+
+  if (/lâm nghiệp|rừng|thủy sản|sinh vật|tài nguyên|môi trường/i.test(text)) {
+    if (level === 'know') return 'Tính diện tích rừng, tỉ lệ che phủ rừng hoặc sản lượng thủy sản theo công thức đơn giản.';
+    if (level === 'understand') return 'Tính cơ cấu, tỉ trọng các loại rừng, sản lượng khai thác/nuôi trồng thủy sản hoặc mức biến động diện tích rừng.';
+    return 'Xử lí số liệu tài nguyên - môi trường để tính tốc độ tăng trưởng sản lượng thủy sản, độ che phủ rừng và đánh giá mức độ suy giảm tài nguyên.';
+  }
+
+  if (/công nghiệp|cơ cấu kinh tế|gdp|kinh tế/i.test(text)) {
+    if (level === 'know') return 'Tính sản lượng một số sản phẩm công nghiệp hoặc giá trị sản xuất theo số liệu cho sẵn.';
+    if (level === 'understand') return 'Tính cơ cấu GDP, tỉ trọng ngành công nghiệp/dịch vụ, giá trị từng ngành/thành phần kinh tế hoặc mức chuyển dịch cơ cấu.';
+    return 'Xử lí bảng số liệu kinh tế để tính tốc độ tăng trưởng kinh tế, GDP bình quân đầu người và phân tích xu hướng chuyển dịch cơ cấu kinh tế.';
+  }
+
+  if (/giao thông|vận tải|bưu chính|viễn thông/i.test(text)) {
+    if (level === 'know') return 'Tính khối lượng vận chuyển hàng hóa, hành khách hoặc doanh thu theo số liệu cho sẵn.';
+    if (level === 'understand') return 'Tính cự li vận chuyển trung bình, cơ cấu và tỉ trọng các loại hình vận tải.';
+    return 'Xử lí số liệu giao thông vận tải để tính tốc độ tăng trưởng khối lượng vận chuyển, luân chuyển và đánh giá hiệu quả các loại hình vận tải.';
+  }
+
+  if (/thương mại|du lịch|xuất khẩu|nhập khẩu|tài chính/i.test(text)) {
+    if (level === 'know') return 'Tính tổng kim ngạch xuất nhập khẩu hoặc lượt khách du lịch từ bảng số liệu cho trước.';
+    if (level === 'understand') return 'Tính cán cân xuất nhập khẩu, tỉ trọng xuất khẩu/nhập khẩu, doanh thu du lịch bình quân.';
+    return 'Xử lí bảng số liệu thương mại - du lịch để tính tốc độ tăng trưởng kim ngạch xuất nhập khẩu, mức biến động cán cân thương mại và cơ cấu thị trường.';
+  }
+
+  if (level === 'know') return 'Tính toán trực tiếp một bước các chỉ số số liệu địa lí cơ bản từ dữ liệu cho sẵn.';
+  if (level === 'understand') return 'Tính toán, so sánh tỉ trọng, cơ cấu, mức biến động hoặc xác định mối quan hệ địa lí từ bảng số liệu.';
+  return 'Xử lí bảng số liệu nhiều bước, tính tốc độ tăng trưởng, độ chuyển dịch cơ cấu hoặc giải quyết tình huống thực tiễn địa lí.';
+};
+
