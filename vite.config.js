@@ -32,6 +32,10 @@ export default defineConfig({
             return 'motion';
           }
 
+          if (normalizedId.endsWith('/src/data/assessmentCurriculum.ts')) {
+            return 'assessment-curriculum';
+          }
+
           if (normalizedId.includes('/node_modules/mammoth/')) {
             return 'mammoth';
           }
