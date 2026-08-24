@@ -117,7 +117,7 @@ const createFinalError = (
   if (failureTypes.has('INVALID_REQUEST')) {
     return new GeminiRequestError(
       'INVALID_REQUEST',
-      'Yêu cầu gửi tới Gemini chưa được chấp nhận. Hãy tải lại trang và thử lại; nếu lỗi còn xuất hiện, hãy kiểm tra kích thước tài liệu nguồn.'
+      'Gemini từ chối dữ liệu yêu cầu ngay cả ở chế độ JSON tương thích. Hãy giảm kích thước tài liệu nguồn hoặc tải lại từng tệp rồi thử lại.'
     );
   }
   if (failureTypes.has('MODEL_OVERLOADED')) {
@@ -148,36 +148,62 @@ export const generateContentWithFallback = async (
   const ai = new GoogleGenAI({ apiKey: resolvedKey });
   const failures: Array<{ model: string; type: GeminiApiErrorType }> = [];
 
-  for (const model of getOrderedModels(preferredModel)) {
-    try {
-      return await ai.models.generateContent({
-        model,
-        contents: params.contents,
-        ...(params.config ? { config: params.config } : {})
-      });
-    } catch (error: any) {
-      const errorType = parseApiError(error);
-      console.warn('Gemini model failed', { model, errorType, status: getErrorStatus(error), error });
-      failures.push({ model, type: errorType });
+  modelLoop: for (const model of getOrderedModels(preferredModel)) {
+    let requestConfig = params.config;
+    let usedCompatibleJsonMode = false;
 
-      if (errorType === 'INVALID_API_KEY') {
-        throw new GeminiRequestError(
-          'INVALID_API_KEY',
-          'API Key Gemini không hợp lệ hoặc đã hết hạn. Hãy nhập lại khóa được tạo trong Google AI Studio.'
+    while (true) {
+      try {
+        return await ai.models.generateContent({
+          model,
+          contents: params.contents,
+          ...(requestConfig ? { config: requestConfig } : {})
+        });
+      } catch (error: any) {
+        const errorType = parseApiError(error);
+        console.warn('Gemini model failed', {
+          model,
+          errorType,
+          status: getErrorStatus(error),
+          compatibleJsonMode: usedCompatibleJsonMode,
+          error
+        });
+
+        const hasStructuredSchema = Boolean(
+          requestConfig?.responseSchema || requestConfig?.responseJsonSchema
         );
-      }
+        if (errorType === 'INVALID_REQUEST' && hasStructuredSchema && !usedCompatibleJsonMode) {
+          const {
+            responseSchema: _responseSchema,
+            responseJsonSchema: _responseJsonSchema,
+            ...compatibleConfig
+          } = requestConfig;
+          requestConfig = compatibleConfig;
+          usedCompatibleJsonMode = true;
+          continue;
+        }
 
-      if (
-        errorType === 'MODEL_NOT_FOUND' ||
-        errorType === 'PERMISSION_DENIED' ||
-        errorType === 'QUOTA_EXCEEDED' ||
-        errorType === 'MODEL_OVERLOADED' ||
-        errorType === 'UNKNOWN'
-      ) {
-        continue;
-      }
+        failures.push({ model, type: errorType });
 
-      throw createFinalError(failures);
+        if (errorType === 'INVALID_API_KEY') {
+          throw new GeminiRequestError(
+            'INVALID_API_KEY',
+            'API Key Gemini không hợp lệ hoặc đã hết hạn. Hãy nhập lại khóa được tạo trong Google AI Studio.'
+          );
+        }
+
+        if (
+          errorType === 'MODEL_NOT_FOUND' ||
+          errorType === 'PERMISSION_DENIED' ||
+          errorType === 'QUOTA_EXCEEDED' ||
+          errorType === 'MODEL_OVERLOADED' ||
+          errorType === 'UNKNOWN'
+        ) {
+          continue modelLoop;
+        }
+
+        throw createFinalError(failures);
+      }
     }
   }
 

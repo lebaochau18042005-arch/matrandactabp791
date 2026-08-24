@@ -3754,8 +3754,6 @@ ${shortAnswerExamRules}
         properties: {
           part1: {
             type: Type.ARRAY,
-            minItems: String(totals.mc.total),
-            maxItems: String(totals.mc.total),
             items: {
               type: Type.OBJECT,
               properties: {
@@ -3763,8 +3761,6 @@ ${shortAnswerExamRules}
                 question: { type: Type.STRING },
                 options: {
                   type: Type.ARRAY,
-                  minItems: '4',
-                  maxItems: '4',
                   items: { type: Type.STRING }
                 },
                 correctIdx: { type: Type.INTEGER }
@@ -3774,8 +3770,6 @@ ${shortAnswerExamRules}
           },
           part2: {
             type: Type.ARRAY,
-            minItems: String(totals.tf.total / trueFalseStatementsPerQuestion),
-            maxItems: String(totals.tf.total / trueFalseStatementsPerQuestion),
             items: {
               type: Type.OBJECT,
               properties: {
@@ -3783,8 +3777,6 @@ ${shortAnswerExamRules}
                 question: { type: Type.STRING },
                 subQuestions: {
                   type: Type.ARRAY,
-                  minItems: '4',
-                  maxItems: '4',
                   items: {
                     type: Type.OBJECT,
                     properties: {
@@ -3803,8 +3795,6 @@ ${shortAnswerExamRules}
           },
           part3: {
             type: Type.ARRAY,
-            minItems: String(totals.short.total),
-            maxItems: String(totals.short.total),
             items: {
               type: Type.OBJECT,
               properties: {
@@ -3818,8 +3808,6 @@ ${shortAnswerExamRules}
           },
           part4: {
             type: Type.ARRAY,
-            minItems: String(totals.essay.total),
-            maxItems: String(totals.essay.total),
             items: {
               type: Type.OBJECT,
               properties: {
