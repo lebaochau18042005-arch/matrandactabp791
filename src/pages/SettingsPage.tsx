@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../layouts/AppLayout';
 import { useAuth } from '../contexts/AuthContext';
-import { readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from '../lib/geminiSettings';
+import { GEMINI_MODEL_OPTIONS, readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from '../lib/geminiSettings';
 
 // ─── Toggle component ─────────────────────────────────────────────────────────
 function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -228,8 +228,9 @@ export default function SettingsPage() {
               onChange={e => setSelectedModel(e.target.value)}
               className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:border-teal-500 focus:outline-none transition-colors"
             >
-              <option value="gemini-3.5-flash">⚡ Gemini 3.5 Flash (Khuyến nghị - Nhanh & Miễn phí)</option>
-              <option value="gemini-3.1-pro">🧠 Gemini 3.1 Pro (Mạnh nhất)</option>
+              {GEMINI_MODEL_OPTIONS.map(model => (
+                <option key={model.id} value={model.id}>{model.label}</option>
+              ))}
             </select>
             <p className="text-xs text-slate-500 mt-1">Model sẽ được dùng để tạo câu hỏi và nội dung AI.</p>
           </div>

@@ -1,40 +1,135 @@
 import { GoogleGenAI } from '@google/genai';
+import { DEFAULT_GEMINI_MODEL, normalizeGeminiModel } from '../lib/geminiSettings';
 
 export const FALLBACK_MODELS = [
+  DEFAULT_GEMINI_MODEL,
   'gemini-3.5-flash',
-  'gemini-3.1-pro'
+  'gemini-3.5-flash-lite'
 ];
 
-export const parseApiError = (error: any): string => {
-  const message = error?.message || error?.toString() || '';
-  const serialized = JSON.stringify(error) || '';
+export type GeminiApiErrorType =
+  | 'INVALID_API_KEY'
+  | 'PERMISSION_DENIED'
+  | 'MODEL_NOT_FOUND'
+  | 'QUOTA_EXCEEDED'
+  | 'MODEL_OVERLOADED'
+  | 'INVALID_REQUEST'
+  | 'UNKNOWN';
+
+export class GeminiRequestError extends Error {
+  code: Exclude<GeminiApiErrorType, 'UNKNOWN'>;
+
+  constructor(code: Exclude<GeminiApiErrorType, 'UNKNOWN'>, message: string) {
+    super(message);
+    this.name = 'GeminiRequestError';
+    this.code = code;
+  }
+}
+
+const getErrorStatus = (error: any): number => {
+  const candidates = [
+    error?.status,
+    error?.statusCode,
+    error?.response?.status,
+    error?.error?.code
+  ];
+  const status = candidates.map(Number).find(Number.isFinite);
+  return status || 0;
+};
+
+export const parseApiError = (error: any): GeminiApiErrorType => {
+  const message = String(error?.message || error?.toString?.() || '');
+  let serialized = '';
+  try {
+    serialized = JSON.stringify(error) || '';
+  } catch {
+    serialized = '';
+  }
+  const normalized = (message + ' ' + serialized).toUpperCase();
+  const status = getErrorStatus(error);
 
   if (
-    serialized.includes('429') ||
-    message.includes('RESOURCE_EXHAUSTED') ||
-    message.toLowerCase().includes('quota')
+    status === 429 ||
+    normalized.includes('RESOURCE_EXHAUSTED') ||
+    normalized.includes('RATE_LIMIT_EXCEEDED') ||
+    normalized.includes('QUOTA')
   ) return 'QUOTA_EXCEEDED';
 
   if (
-    serialized.includes('503') ||
-    message.includes('UNAVAILABLE') ||
-    message.toLowerCase().includes('high demand') ||
-    message.toLowerCase().includes('overloaded')
+    status === 503 ||
+    status === 502 ||
+    status === 504 ||
+    normalized.includes('UNAVAILABLE') ||
+    normalized.includes('HIGH DEMAND') ||
+    normalized.includes('OVERLOADED')
   ) return 'MODEL_OVERLOADED';
 
   if (
-    message.includes('API_KEY_INVALID') ||
-    message.includes('401') ||
-    message.includes('PERMISSION_DENIED') ||
-    serialized.includes('404') // 404 is also seen for discontinued models like 2.5-flash
+    status === 404 ||
+    normalized.includes('MODEL_NOT_FOUND') ||
+    normalized.includes('NOT_FOUND') ||
+    normalized.includes('MODEL WAS NOT FOUND') ||
+    normalized.includes('MODEL IS NOT FOUND')
+  ) return 'MODEL_NOT_FOUND';
+
+  if (
+    status === 401 ||
+    normalized.includes('API_KEY_INVALID') ||
+    normalized.includes('AUTHENTICATION')
   ) return 'INVALID_API_KEY';
+
+  if (
+    status === 403 ||
+    normalized.includes('PERMISSION_DENIED')
+  ) return 'PERMISSION_DENIED';
+
+  if (
+    status === 400 ||
+    normalized.includes('INVALID_ARGUMENT') ||
+    normalized.includes('INVALID_REQUEST')
+  ) return 'INVALID_REQUEST';
 
   return 'UNKNOWN';
 };
 
 export const getOrderedModels = (selectedModel?: string): string[] => {
-  if (!selectedModel || !FALLBACK_MODELS.includes(selectedModel)) return FALLBACK_MODELS;
-  return [selectedModel, ...FALLBACK_MODELS.filter((model) => model !== selectedModel)];
+  const preferredModel = normalizeGeminiModel(selectedModel);
+  return Array.from(new Set([preferredModel, ...FALLBACK_MODELS].filter(Boolean)));
+};
+
+const createFinalError = (
+  failures: Array<{ model: string; type: GeminiApiErrorType }>
+): GeminiRequestError => {
+  const failureTypes = new Set(failures.map(failure => failure.type));
+
+  if (failureTypes.has('PERMISSION_DENIED')) {
+    return new GeminiRequestError(
+      'PERMISSION_DENIED',
+      'API Key không có quyền sử dụng Gemini API hoặc mô hình đã chọn. Hãy kiểm tra giới hạn của khóa/dự án trong Google AI Studio, hoặc tạo API Key mới.'
+    );
+  }
+  if (failureTypes.has('QUOTA_EXCEEDED')) {
+    return new GeminiRequestError(
+      'QUOTA_EXCEEDED',
+      'API Key đã hết hạn mức sử dụng. Hãy chờ hạn mức được làm mới hoặc dùng API Key khác.'
+    );
+  }
+  if (failureTypes.has('INVALID_REQUEST')) {
+    return new GeminiRequestError(
+      'INVALID_REQUEST',
+      'Yêu cầu gửi tới Gemini chưa được chấp nhận. Hãy tải lại trang và thử lại; nếu lỗi còn xuất hiện, hãy kiểm tra kích thước tài liệu nguồn.'
+    );
+  }
+  if (failureTypes.has('MODEL_OVERLOADED')) {
+    return new GeminiRequestError(
+      'MODEL_OVERLOADED',
+      'Các mô hình Gemini đang quá tải hoặc tạm thời không phản hồi. Hãy thử lại sau ít phút.'
+    );
+  }
+  return new GeminiRequestError(
+    'MODEL_NOT_FOUND',
+    'Các mô hình Gemini được cấu hình hiện không khả dụng cho API Key này. Hãy chọn một mô hình ổn định khác trong Cài đặt.'
+  );
 };
 
 export const generateContentWithFallback = async (
@@ -42,40 +137,49 @@ export const generateContentWithFallback = async (
   preferredModel: string,
   params: { contents: any; config?: any }
 ) => {
-  // Fallback to environment variable if no key provided
   const resolvedKey = apiKey || import.meta.env.VITE_GEMINI_API_KEY || '';
   if (!resolvedKey) {
-    throw new Error('Chưa có API Key. Vui lòng nhập Gemini API Key ở trang Cài đặt.');
+    throw new GeminiRequestError(
+      'INVALID_API_KEY',
+      'Chưa có API Key. Vui lòng nhập Gemini API Key ở trang Cài đặt.'
+    );
   }
+
   const ai = new GoogleGenAI({ apiKey: resolvedKey });
-  let lastError: any = null;
+  const failures: Array<{ model: string; type: GeminiApiErrorType }> = [];
 
   for (const model of getOrderedModels(preferredModel)) {
     try {
-      const response = await ai.models.generateContent({
+      return await ai.models.generateContent({
         model,
         contents: params.contents,
         ...(params.config ? { config: params.config } : {})
       });
-      return response;
     } catch (error: any) {
-      console.warn(`Model ${model} failed. Error:`, error);
-      lastError = error;
       const errorType = parseApiError(error);
-      
+      console.warn('Gemini model failed', { model, errorType, status: getErrorStatus(error), error });
+      failures.push({ model, type: errorType });
+
       if (errorType === 'INVALID_API_KEY') {
-        throw new Error("API Key không hợp lệ hoặc mô hình bị khóa. Vui lòng vào ⚙️ Cài đặt để kiểm tra lại API Key.");
-      } else if (errorType === 'QUOTA_EXCEEDED') {
-        throw new Error("API Key đã hết hạn mức sử dụng (Quota Exceeded). Vui lòng dùng API Key khác.");
-      } else if (errorType === 'MODEL_OVERLOADED') {
-        console.warn(`Model ${model} đang bị quá tải. Đang chuyển sang model dự phòng...`);
-        continue;
-      } else {
-        // Unknown error, try next model just in case, but usually a syntax issue
+        throw new GeminiRequestError(
+          'INVALID_API_KEY',
+          'API Key Gemini không hợp lệ hoặc đã hết hạn. Hãy nhập lại khóa được tạo trong Google AI Studio.'
+        );
+      }
+
+      if (
+        errorType === 'MODEL_NOT_FOUND' ||
+        errorType === 'PERMISSION_DENIED' ||
+        errorType === 'QUOTA_EXCEEDED' ||
+        errorType === 'MODEL_OVERLOADED' ||
+        errorType === 'UNKNOWN'
+      ) {
         continue;
       }
+
+      throw createFinalError(failures);
     }
   }
 
-  throw lastError || new Error("Tất cả các model AI đều đang quá tải hoặc gặp lỗi. Vui lòng thử lại sau.");
+  throw createFinalError(failures);
 };

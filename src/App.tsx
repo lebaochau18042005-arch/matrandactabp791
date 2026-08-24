@@ -63,7 +63,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Swal from 'sweetalert2';
 import { parseSimDataFromContent } from './utils/simContentParser';
-import { readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from './lib/geminiSettings';
+import { GEMINI_MODEL_OPTIONS, readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from './lib/geminiSettings';
 import {
   findStoredExam,
   readStoredExams,
@@ -250,10 +250,11 @@ const ApiSettingsModal = ({
     onClose();
   };
 
-  const modelsList = [
-    { id: 'gemini-3.5-flash', label: 'gemini-3.5-flash (Mặc định)', desc: 'Mô hình tốc độ cao thế hệ mới, phản hồi cực nhanh — khuyến nghị cho mọi tác vụ.' },
-    { id: 'gemini-3.1-pro', label: 'gemini-3.1-pro', desc: 'Mô hình flagship mạnh mẽ nhất, chuyên xử lý logic và agentic workflows.' },
-  ];
+  const modelsList = GEMINI_MODEL_OPTIONS.map(model => ({
+    id: model.id,
+    label: model.id === 'gemini-3.6-flash' ? model.label + ' (Mặc định)' : model.label,
+    desc: model.description
+  }));
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -3986,12 +3987,22 @@ ${shortAnswerExamRules}
       }
     } catch (err) {
       console.error(err);
-      Swal.fire({
+      const errorCode = err && typeof err === 'object' && 'code' in err
+        ? String((err as { code?: unknown }).code || '')
+        : '';
+      const shouldOpenSettings = ['INVALID_API_KEY', 'PERMISSION_DENIED', 'MODEL_NOT_FOUND', 'QUOTA_EXCEEDED']
+        .includes(errorCode);
+      const errorResult = await Swal.fire({
         title: 'Lỗi sinh đề thi',
         text: err instanceof Error ? err.message : 'Không thể tạo đề thi tự động. Vui lòng kiểm tra API Key hoặc cấu hình ma trận.',
         icon: 'error',
-        confirmButtonColor: '#0d9488'
+        showCancelButton: shouldOpenSettings,
+        confirmButtonText: shouldOpenSettings ? 'Mở Cài đặt' : 'Đóng',
+        cancelButtonText: 'Đóng',
+        confirmButtonColor: '#0d9488',
+        cancelButtonColor: '#94a3b8'
       });
+      if (shouldOpenSettings && errorResult.isConfirmed) onOpenSettings();
     } finally {
       setIsExamLoading(false);
     }
@@ -4260,18 +4271,19 @@ ${shortAnswerExamRules}
       if (rowQuestionCount === 0) {
         warnings.push(rowLabel + ' chưa được phân bổ câu hỏi.');
       }
-      const rowTfStatementCount = COGNITIVE_LEVELS.reduce((sum, level) => sum + row.tf[level], 0);
-      if (rowTfStatementCount % trueFalseStatementsPerQuestion !== 0) {
-        blocking.push(rowLabel + ' có ' + rowTfStatementCount + ' ý Đúng/Sai; phải là bội số của ' +
-          trueFalseStatementsPerQuestion + ' để mỗi câu lớn có đủ a), b), c), d).');
-      }
-
       COGNITIVE_LEVELS.forEach((level) => {
         if (row.essay[level] > 0 && !row.essayLabels?.[level]?.trim()) {
           warnings.push(rowLabel + ' có câu Tự luận mức ' + levelLabels[level] + ' nhưng chưa ghi ký hiệu câu.');
         }
       });
     });
+
+    const totalTrueFalseStatements = rows.reduce((total, row) =>
+      total + COGNITIVE_LEVELS.reduce((rowTotal, level) => rowTotal + row.tf[level], 0), 0);
+    if (totalTrueFalseStatements % trueFalseStatementsPerQuestion !== 0) {
+      blocking.push('Toàn ma trận có ' + totalTrueFalseStatements + ' ý Đúng/Sai; tổng số ý phải là bội số của ' +
+        trueFalseStatementsPerQuestion + ' để mỗi câu lớn có đủ a), b), c), d).');
+    }
 
     (['mc', 'tf', 'short'] as const).forEach((type) => {
       if (totals[type].total > 0 && pointConfig[type] <= 0) {

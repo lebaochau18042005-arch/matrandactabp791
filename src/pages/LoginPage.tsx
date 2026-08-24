@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from '../lib/geminiSettings';
+import { GEMINI_MODEL_OPTIONS, readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from '../lib/geminiSettings';
 
 // ─── Floating orb config ───────────────────────────────────────────────────────
 const ORBS = [
@@ -439,8 +439,9 @@ export default function LoginPage() {
                     onChange={handleModelChange}
                     className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50 text-white focus:border-teal-500 focus:outline-none transition-colors"
                   >
-                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mặc định)</option>
-                    <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                    {GEMINI_MODEL_OPTIONS.map(model => (
+                      <option key={model.id} value={model.id}>{model.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
