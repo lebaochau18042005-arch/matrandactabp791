@@ -63,6 +63,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Swal from 'sweetalert2';
 import { parseSimDataFromContent } from './utils/simContentParser';
+import { parseInlineQuestionTable } from './utils/stimulusTable';
 import { GEMINI_MODEL_OPTIONS, readGeminiApiKey, readGeminiModel, saveGeminiApiKey, saveGeminiModel } from './lib/geminiSettings';
 import {
   findStoredExam,
@@ -160,6 +161,80 @@ const DeferredContentFallback = () => (
   </div>
 );
 
+const ExamQuestionPrompt = ({
+  questionNumber,
+  question,
+}: {
+  questionNumber: string | number;
+  question: string;
+}) => {
+  const table = parseInlineQuestionTable(question);
+  if (!table) {
+    return <p><strong>Câu {questionNumber}:</strong> {question}</p>;
+  }
+
+  return (
+    <div className="space-y-2" data-exam-question-table={table.layout}>
+      <p><strong>Câu {questionNumber}:</strong> {table.lead}</p>
+      <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+        <table
+          aria-label={'Bảng số liệu cho câu ' + questionNumber}
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            margin: '8px 0 10px',
+            tableLayout: table.layout === 'horizontal' ? 'fixed' : 'auto',
+          }}
+        >
+          <thead>
+            <tr>
+              {table.headers.map((header, index) => (
+                <th
+                  key={index}
+                  scope="col"
+                  style={{
+                    border: '1px solid #475569',
+                    backgroundColor: '#f1f5f9',
+                    padding: '5px 4px',
+                    textAlign: 'center',
+                    fontWeight: 700,
+                    fontSize: table.layout === 'horizontal' ? '9pt' : '10pt',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td
+                    key={cellIndex}
+                    style={{
+                      border: '1px solid #475569',
+                      backgroundColor: cellIndex === 0 ? '#f8fafc' : '#ffffff',
+                      padding: '5px 4px',
+                      textAlign: 'center',
+                      fontWeight: cellIndex === 0 ? 700 : 400,
+                      fontSize: table.layout === 'horizontal' ? '9pt' : '10pt',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {table.tail && <p>{table.tail}</p>}
+    </div>
+  );
+};
 // --- Types ---
 interface AppData {
   id: string;
@@ -766,9 +841,10 @@ const SHORT_ANSWER_SPEC_RULES = `QUY TẮC CHO PHẦN III – CÂU HỎI TRẢ L
 interface MatrixModuleProps {
   subjectProfile: SubjectProfile;
   onSubjectProfileUpdate: (profile: SubjectProfile) => void;
+  onOpenSettings: () => void;
 }
 
-const MatrixModule = ({ subjectProfile, onSubjectProfileUpdate }: MatrixModuleProps) => {
+const MatrixModule = ({ subjectProfile, onSubjectProfileUpdate, onOpenSettings }: MatrixModuleProps) => {
   const ACTIVE_SUBJECT_PROFILE = subjectProfile;
   const MATRIX_DRAFT_STORAGE_KEY = ACTIVE_SUBJECT_PROFILE.storage.draftKey;
   const MATRIX_HISTORY_STORAGE_KEY = ACTIVE_SUBJECT_PROFILE.storage.matrixHistoryKey;
@@ -2245,55 +2321,157 @@ const MatrixModule = ({ subjectProfile, onSubjectProfileUpdate }: MatrixModulePr
     return `- [NL3 - Vận dụng kiến thức, kĩ năng]: Giải quyết các tình huống thực tiễn, phân tích nguyên nhân và đề xuất giải pháp phát triển bền vững hoặc ứng phó thiên tai liên quan đến ${target.toLowerCase()}.
 - [NL2 - Tìm hiểu địa lí]: Xử lí số liệu địa lí hoặc lựa chọn biểu đồ phù hợp để làm rõ đặc điểm của đối tượng.`;
   };
+  const cloneExportContent = (source: HTMLDivElement) => {
+    const clone = source.cloneNode(true) as HTMLDivElement;
+
+    const originalInputs = source.querySelectorAll<HTMLInputElement>('input');
+    const clonedInputs = clone.querySelectorAll<HTMLInputElement>('input');
+    originalInputs.forEach((originalInput, index) => {
+      const clonedInput = clonedInputs[index];
+      if (!clonedInput) return;
+
+      const span = document.createElement('span');
+      span.textContent = ['checkbox', 'radio'].includes(originalInput.type)
+        ? (originalInput.checked ? '☒' : '☐')
+        : (originalInput.value || '');
+      span.style.fontWeight = 'bold';
+      clonedInput.parentNode?.replaceChild(span, clonedInput);
+    });
+
+    const originalTextareas = source.querySelectorAll<HTMLTextAreaElement>('textarea');
+    const clonedTextareas = clone.querySelectorAll<HTMLTextAreaElement>('textarea');
+    originalTextareas.forEach((originalTextarea, index) => {
+      const clonedTextarea = clonedTextareas[index];
+      if (!clonedTextarea) return;
+
+      const div = document.createElement('div');
+      div.style.whiteSpace = 'pre-wrap';
+      div.style.textAlign = 'center';
+      div.style.fontWeight = 'bold';
+      div.textContent = originalTextarea.value || '';
+      clonedTextarea.parentNode?.replaceChild(div, clonedTextarea);
+    });
+
+    const originalSelects = source.querySelectorAll<HTMLSelectElement>('select');
+    const clonedSelects = clone.querySelectorAll<HTMLSelectElement>('select');
+    originalSelects.forEach((originalSelect, index) => {
+      const clonedSelect = clonedSelects[index];
+      if (!clonedSelect) return;
+
+      const span = document.createElement('span');
+      span.textContent = originalSelect.selectedOptions[0]?.textContent || originalSelect.value;
+      span.style.fontWeight = 'bold';
+      clonedSelect.parentNode?.replaceChild(span, clonedSelect);
+    });
+
+    clone.querySelectorAll('.no-print').forEach(element => element.remove());
+    return clone;
+  };
+
+  const renderElementForPdf = async (
+    source: HTMLDivElement,
+    render: typeof import('html2canvas')['default'],
+    preferredScale = 1.75,
+  ) => {
+    const clone = cloneExportContent(source);
+    const sourceWidth = Math.ceil(Math.max(source.scrollWidth, source.getBoundingClientRect().width, 1));
+    const host = document.createElement('div');
+    host.style.position = 'fixed';
+    host.style.left = '-100000px';
+    host.style.top = '0';
+    host.style.width = sourceWidth + 'px';
+    host.style.background = '#ffffff';
+    host.style.pointerEvents = 'none';
+
+    clone.style.boxSizing = 'border-box';
+    clone.style.width = sourceWidth + 'px';
+    clone.style.maxWidth = 'none';
+    clone.style.margin = '0';
+    host.appendChild(clone);
+    document.body.appendChild(host);
+
+    try {
+      await document.fonts.ready;
+      const captureWidth = Math.ceil(Math.max(clone.scrollWidth, clone.getBoundingClientRect().width, 1));
+      const captureHeight = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height, 1));
+      const maxCanvasDimension = 16384;
+      const maxCanvasArea = 268435456;
+      const safeScale = Math.min(
+        preferredScale,
+        maxCanvasDimension / captureWidth,
+        maxCanvasDimension / captureHeight,
+        Math.sqrt(maxCanvasArea / (captureWidth * captureHeight)),
+      );
+
+      return await render(clone, {
+        scale: Math.max(0.1, safeScale),
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true,
+        windowWidth: captureWidth,
+        windowHeight: captureHeight,
+      });
+    } finally {
+      host.remove();
+    }
+  };
+
+  const appendCanvasPagesToPdf = (
+    pdf: any,
+    canvas: HTMLCanvasElement,
+    options: { alias: string; margin?: number; startOnNewPage?: boolean },
+  ) => {
+    const margin = options.margin ?? 8;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const availableWidth = pageWidth - margin * 2;
+    const availableHeight = pageHeight - margin * 2;
+    const renderedHeight = (canvas.height * availableWidth) / canvas.width;
+    const pageCount = Math.max(1, Math.ceil((renderedHeight - 0.01) / availableHeight));
+    const imageData = canvas.toDataURL('image/png');
+
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+      if (options.startOnNewPage || pageIndex > 0) pdf.addPage();
+      options.startOnNewPage = false;
+      pdf.addImage(
+        imageData,
+        'PNG',
+        margin,
+        margin - pageIndex * availableHeight,
+        availableWidth,
+        renderedHeight,
+        options.alias,
+        'FAST',
+      );
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, pageWidth, margin, 'F');
+      pdf.rect(0, pageHeight - margin, pageWidth, margin, 'F');
+    }
+  };
+
   const downloadAsPDF = async (ref: React.RefObject<HTMLDivElement>, filename: string) => {
     if (!ref.current) return;
-    const html2canvas = (await import('html2canvas')).default;
-    const { jsPDF } = await import('jspdf');
-    const canvas = await html2canvas(ref.current, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(filename + '.pdf');
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      const canvas = await renderElementForPdf(ref.current, html2canvas);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      pdf.setProperties({ title: filename });
+      appendCanvasPagesToPdf(pdf, canvas, { alias: 'geohub-document' });
+      pdf.save(filename + '.pdf');
+    } catch (error) {
+      console.error('Không thể xuất PDF:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Chưa thể tạo PDF',
+        text: 'Tài liệu quá lớn hoặc trình duyệt thiếu bộ nhớ. Vui lòng thử lại sau khi đóng bớt thẻ.',
+      });
+    }
   };
 
   const getCleanHtml = (ref: React.RefObject<HTMLDivElement>) => {
     if (!ref.current) return '';
-    const clone = ref.current.cloneNode(true) as HTMLDivElement;
-    
-    const originalInputs = ref.current.querySelectorAll('input');
-    const clonedInputs = clone.querySelectorAll('input');
-    originalInputs.forEach((originalInput, idx) => {
-      const value = originalInput.value || '';
-      const clonedInput = clonedInputs[idx];
-      if (clonedInput) {
-        const span = document.createElement('span');
-        span.textContent = value;
-        span.style.fontWeight = 'bold';
-        clonedInput.parentNode?.replaceChild(span, clonedInput);
-      }
-    });
-
-    const originalTextareas = ref.current.querySelectorAll('textarea');
-    const clonedTextareas = clone.querySelectorAll('textarea');
-    originalTextareas.forEach((originalTextarea, idx) => {
-      const value = originalTextarea.value || '';
-      const clonedTextarea = clonedTextareas[idx];
-      if (clonedTextarea) {
-        const div = document.createElement('div');
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.textAlign = 'center';
-        div.style.fontWeight = 'bold';
-        div.textContent = value;
-        clonedTextarea.parentNode?.replaceChild(div, clonedTextarea);
-      }
-    });
-
-    clone.querySelectorAll('.no-print').forEach(el => el.remove());
-
-    return clone.innerHTML;
+    return cloneExportContent(ref.current).innerHTML;
   };
 
   const downloadAsWord = async (type: 'matrix' | 'spec' | 'exam') => {
@@ -2403,27 +2581,32 @@ const MatrixModule = ({ subjectProfile, onSubjectProfileUpdate }: MatrixModulePr
   const downloadCombinedPDF = async () => {
     const sections = [matrixRef, specRef, examRef, answerRef].filter(ref => ref.current);
     if (sections.length === 0) return;
-    const html2canvas = (await import('html2canvas')).default;
-    const { jsPDF } = await import('jspdf');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 7;
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      pdf.setProperties({ title: ACTIVE_SUBJECT_PROFILE.document.titles.bundle });
 
-    for (let index = 0; index < sections.length; index++) {
-      const element = sections[index].current;
-      if (!element) continue;
-      const canvas = await html2canvas(element, { scale: 1.5, backgroundColor: '#ffffff' });
-      const imageData = canvas.toDataURL('image/png');
-      const availableWidth = pageWidth - margin * 2;
-      const availableHeight = pageHeight - margin * 2;
-      const scale = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
-      const width = canvas.width * scale;
-      const height = canvas.height * scale;
-      if (index > 0) pdf.addPage();
-      pdf.addImage(imageData, 'PNG', (pageWidth - width) / 2, margin, width, height);
+      for (let index = 0; index < sections.length; index += 1) {
+        const element = sections[index].current;
+        if (!element) continue;
+        const canvas = await renderElementForPdf(element, html2canvas, 1.5);
+        appendCanvasPagesToPdf(pdf, canvas, {
+          alias: 'geohub-bundle-' + index,
+          margin: 8,
+          startOnNewPage: index > 0,
+        });
+      }
+
+      pdf.save(ACTIVE_SUBJECT_PROFILE.document.filenames.bundle + '.pdf');
+    } catch (error) {
+      console.error('Không thể xuất trọn bộ PDF:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Chưa thể tạo trọn bộ PDF',
+        text: 'Một tài liệu trong bộ hồ sơ quá lớn. Vui lòng thử tải riêng từng tài liệu.',
+      });
     }
-    pdf.save(ACTIVE_SUBJECT_PROFILE.document.filenames.bundle + '.pdf');
   };
 
   const readUploadedText = async (file: File) => {
@@ -6197,7 +6380,7 @@ ${shortAnswerExamRules}
                     <div className="space-y-4 pl-2">
                       {activeShuffledExam.part1.map((q) => (
                         <div key={q.id} className="space-y-1.5">
-                          <p><strong>Câu {q.id}:</strong> {q.question}</p>
+                          <ExamQuestionPrompt questionNumber={q.id} question={q.question} />
                           <div className="grid grid-cols-2 gap-2 pl-4 text-xs">
                             <div>A. {q.options[0]}</div>
                             <div>B. {q.options[1]}</div>
@@ -6226,7 +6409,7 @@ ${shortAnswerExamRules}
                     <div className="space-y-4 pl-2">
                       {activeShuffledExam.part2.map((q) => (
                         <div key={q.id} className="space-y-2">
-                          <p><strong>Câu {q.id}:</strong> {q.question}</p>
+                          <ExamQuestionPrompt questionNumber={q.id} question={q.question} />
                           <div className="space-y-1 pl-4 text-xs">
                             {q.subQuestions.map((sub, sIdx) => (
                               <p key={sIdx}>
@@ -6256,7 +6439,7 @@ ${shortAnswerExamRules}
                     <div className="space-y-4 pl-2">
                       {activeShuffledExam.part3.map((q) => (
                         <div key={q.id} className="space-y-1">
-                          <p><strong>Câu {q.id}:</strong> {q.question}</p>
+                          <ExamQuestionPrompt questionNumber={q.id} question={q.question} />
                           <p className="text-xs font-bold text-slate-400 pl-4">Đáp số: .....................................................</p>
                         </div>
                       ))}
@@ -6280,7 +6463,7 @@ ${shortAnswerExamRules}
                     <div className="space-y-4 pl-2">
                       {activeShuffledExam.part4.map((q) => (
                         <div key={q.id} className="space-y-1.5">
-                          <p><strong>Câu {q.id}:</strong> {q.question}</p>
+                          <ExamQuestionPrompt questionNumber={q.id} question={q.question} />
                         </div>
                       ))}
                     </div>
@@ -10910,6 +11093,7 @@ const Workspace = ({
                 <MatrixModule
                   subjectProfile={activeSubjectProfile}
                   onSubjectProfileUpdate={handleSubjectProfileUpdate}
+                  onOpenSettings={onOpenSettings}
                 />
               </div>
             )}

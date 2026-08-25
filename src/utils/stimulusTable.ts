@@ -13,6 +13,14 @@ export interface NormalizedStimulusTable {
   source: 'tableData' | 'content';
 }
 
+export interface InlineQuestionTable {
+  lead: string;
+  headers: string[];
+  rows: string[][];
+  layout: 'horizontal' | 'vertical';
+  tail?: string;
+}
+
 const cellToString = (value: StimulusTableCell) => String(value ?? '').trim();
 
 const cleanPipeCells = (line: string) => {
@@ -88,6 +96,119 @@ export const parsePipeTable = (content?: string): NormalizedStimulusTable | null
   };
 };
 
+const instructionStartPattern = /(?:căn cứ|dựa(?:\s+vào)?|hãy|tính|cho biết|nhận xét|xác định|lựa chọn|so sánh|theo bảng|từ bảng|biểu đồ)\b/iu;
+
+const splitTrailingInstruction = (rawValue: string) => {
+  const source = rawValue.trim();
+  const boundaryPattern = /(?:[.!?,]\s+|\r?\n+|\s+)(?=(?:căn cứ|dựa(?:\s+vào)?|hãy|tính|cho biết|nhận xét|xác định|lựa chọn|so sánh|theo bảng|từ bảng|biểu đồ)\b)/iu;
+  const boundary = boundaryPattern.exec(source);
+  if (!boundary || boundary.index <= 0) return { value: source, tail: '' };
+
+  return {
+    value: source.slice(0, boundary.index).replace(/[.!?,]+$/, '').trim(),
+    tail: source.slice(boundary.index + boundary[0].length).trim(),
+  };
+};
+
+const parseInlineLabelValue = (segment: string, allowTail = false) => {
+  const separatorIndex = segment.lastIndexOf(':');
+  if (separatorIndex <= 0) return null;
+
+  const label = segment.slice(0, separatorIndex).trim();
+  const rawValue = segment.slice(separatorIndex + 1).trim();
+  const parsedValue = allowTail ? splitTrailingInstruction(rawValue) : { value: rawValue, tail: '' };
+  const value = parsedValue.value.replace(/[.!?]+$/, '').trim();
+  if (!label || !value || value.length > 60 || !/\d/.test(value)) return null;
+
+  const numericValue = value.match(/^([-+]?\d(?:[\d\s.,]*\d)?)(?:\s*([%‰°A-Za-zÀ-ỹ0-9²³/.-]+(?:\s+[A-Za-zÀ-ỹ0-9²³/.-]+)*))?$/u);
+  if (!numericValue) return null;
+  const unitText = String(numericValue[2] || '').trim();
+
+  return {
+    label,
+    value,
+    numericValue: numericValue[1].trim(),
+    unitText,
+    unitSuffix: unitText.toLocaleLowerCase('vi-VN'),
+    tail: parsedValue.tail,
+  };
+};
+
+export const parseInlineQuestionTable = (question?: string): InlineQuestionTable | null => {
+  const source = String(question || '').trim();
+  if (!source || !/(?:bảng|số liệu|dữ liệu)/i.test(source)) return null;
+
+  const segments = source.split(';').map(segment => segment.trim()).filter(Boolean);
+  if (segments.length < 3) return null;
+
+  const firstSeparatorIndex = segments[0].lastIndexOf(':');
+  if (firstSeparatorIndex <= 0) return null;
+
+  const firstValue = segments[0].slice(firstSeparatorIndex + 1).trim();
+  const leadAndLabel = segments[0].slice(0, firstSeparatorIndex).trim();
+  const leadSeparatorIndex = leadAndLabel.lastIndexOf(':');
+  if (leadSeparatorIndex <= 0) return null;
+
+  const lead = leadAndLabel.slice(0, leadSeparatorIndex + 1).trim();
+  const firstLabel = leadAndLabel.slice(leadSeparatorIndex + 1).trim();
+  const firstPair = parseInlineLabelValue(firstLabel + ': ' + firstValue);
+  if (!firstPair) return null;
+
+  const pairs = [firstPair];
+  let tail = '';
+  for (let index = 1; index < segments.length; index += 1) {
+    const isLastSegment = index === segments.length - 1;
+    const pair = parseInlineLabelValue(segments[index], isLastSegment);
+    if (pair) {
+      if (pair.tail && !isLastSegment) return null;
+      pairs.push(pair);
+      tail = pair.tail;
+      continue;
+    }
+
+    const trailingText = segments.slice(index).join('; ').trim();
+    if (pairs.length < 3 || !instructionStartPattern.test(trailingText)) return null;
+    tail = trailingText;
+    break;
+  }
+
+  if (pairs.length < 3) return null;
+  const unitSuffixes = new Set(pairs.map(pair => pair.unitSuffix).filter(Boolean));
+  if (unitSuffixes.size > 1) return null;
+
+  const leadUnit = lead.match(/\(\s*đơn\s*vị\s*:\s*([^)]+)\)/i)?.[1]?.trim();
+  const sharedInlineUnit = !leadUnit && pairs.every(pair => pair.unitSuffix && pair.unitSuffix === pairs[0].unitSuffix)
+    ? pairs[0].unitText
+    : '';
+  const displayUnit = leadUnit || sharedInlineUnit;
+  const valueHeader = displayUnit ? 'Giá trị (' + displayUnit + ')' : 'Giá trị';
+  const values = sharedInlineUnit || (leadUnit && pairs.every(pair => pair.unitSuffix === pairs[0].unitSuffix))
+    ? pairs.map(pair => pair.numericValue)
+    : pairs.map(pair => pair.value);
+  const dimensionParts = pairs.map(pair => pair.label.match(/^(.+?)\s+((?:\d{1,4}(?:\s*[-/]\s*\d{1,4})?)|[IVX]+)$/i));
+  const plainYearLabels = pairs.every(pair => /^(?:18|19|20|21)\d{2}$/.test(pair.label));
+  const canUseHorizontalLayout = pairs.length <= 16 && dimensionParts.every(Boolean) &&
+    new Set(dimensionParts.map(match => match?.[1].trim().toLocaleLowerCase('vi-VN'))).size === 1;
+
+  if (canUseHorizontalLayout || plainYearLabels) {
+    const dimensionLabel = plainYearLabels ? 'Năm' : (dimensionParts[0]?.[1].trim() || 'Nội dung');
+    return {
+      lead,
+      headers: [dimensionLabel, ...(plainYearLabels ? pairs.map(pair => pair.label) : dimensionParts.map(match => match?.[2] || ''))],
+      rows: [[valueHeader, ...values]],
+      layout: 'horizontal',
+      tail,
+    };
+  }
+
+  return {
+    lead,
+    headers: ['Nội dung', valueHeader],
+    rows: pairs.map((pair, index) => [pair.label, values[index]]),
+    layout: 'vertical',
+    tail,
+  };
+};
 export const normalizeStimulusTable = (stimulus?: StimulusTableLike): NormalizedStimulusTable | null => (
   tableFromRecords(stimulus?.tableData) ?? parsePipeTable(stimulus?.content)
 );
